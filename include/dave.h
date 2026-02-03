@@ -72,6 +72,7 @@ typedef struct dave_struct {
     int (*is_dead)(struct dave_struct *dave);
 } dave_t;
 
+void dave_destroy(dave_t *dave);
 dave_t* dave_create(soundfx_t *sfx, int x, int y);
 void dave_update_keys(dave_t *dave, int left, int right, int jump, int down, int jetpack);
 

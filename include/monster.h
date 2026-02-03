@@ -31,6 +31,7 @@ typedef struct monster_struct {
     int (*is_alive)(struct monster_struct *monster);
 } monster_t;
 
+void monster_destroy(monster_t *monster);
 monster_t* monster_create(int x, int y, int w, int h);
 monster_t* monster_create_sun(int x, int y);
 monster_t* monster_create_spider(int x, int y);

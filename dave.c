@@ -775,6 +775,15 @@ static int dave_get_sprite(tile_t *tile) {
     return sprite;
 }
 
+void dave_destroy(dave_t *dave) {
+    if (!dave) return;
+
+    if (dave->tile) {
+        free(dave->tile);
+    }
+    free(dave);
+}
+
 dave_t* dave_create(soundfx_t *sfx, int x, int y) {
     dave_t *dave = malloc(sizeof(dave_t));
     dave->sfx = sfx;

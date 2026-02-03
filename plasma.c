@@ -66,6 +66,15 @@ static int plasma_get_sprite(plasma_t *plasma) {
     return plasma->tile->get_sprite(plasma->tile);
 }
 
+void plasma_destroy(plasma_t *plasma) {
+    if (!plasma) return;
+
+    if (plasma->tile) {
+        free(plasma->tile);
+    }
+    free(plasma);
+}
+
 plasma_t* plasma_create_left(int x, int y) {
     plasma_t *plasma = malloc(sizeof(plasma_t));
 

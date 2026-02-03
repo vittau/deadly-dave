@@ -19,6 +19,7 @@ typedef struct bullet_struct {
     int (*is_dead)(struct bullet_struct *bullet);
 } bullet_t;
 
+void bullet_destroy(bullet_t *bullet);
 bullet_t* bullet_create_right(int x, int y);
 bullet_t* bullet_create_left(int x, int y);
 

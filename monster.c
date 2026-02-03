@@ -325,6 +325,19 @@ static int monster_is_alive(monster_t *monster) {
     return 0;
 }
 
+void monster_destroy(monster_t *monster) {
+    if (!monster) return;
+
+    if (monster->tile) {
+        free(monster->tile);
+    }
+
+    if (monster->plasma) {
+        plasma_destroy(monster->plasma);
+    }
+    free(monster);
+}
+
 monster_t* monster_create(int x, int y, int w, int h) {
     monster_t *monster = malloc(sizeof(monster_t));
 

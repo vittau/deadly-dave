@@ -20,6 +20,7 @@ typedef struct plasma_struct {
     int (*get_sprite)(struct plasma_struct *plasma);
 } plasma_t;
 
+void plasma_destroy(plasma_t *plasma);
 plasma_t* plasma_create_right(int x, int y);
 plasma_t* plasma_create_left(int x, int y);
 

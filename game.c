@@ -282,6 +282,10 @@ void init_game(game_context_t *game) {
     tile_create_top_separator(&game->top_separator, 0, 11);
     tile_create_grail_banner(&game->grail_banner, 70, 183);
     tile_create_gun_banner(&game->gun_banner, 240, 170);
+
+    for (int i = 0; i < MAX_MONSTERS; i++) {
+        game->monsters[i] = NULL;
+    }
 }
 
 void get_keys(keys_state_t* state) {
@@ -452,6 +456,7 @@ void start_intro() {
 
 void clear_monsters(game_context_t *game) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
+        monster_destroy(game->monsters[i]);
         game->monsters[i] = NULL;
     }
 }
@@ -566,6 +571,7 @@ void game_do_plasmas(game_context_t *game, tile_t *map, keys_state_t *keys) {
         if (game->monsters[i] != NULL) {
             if (game->monsters[i]->plasma != NULL) {
                 if (game->monsters[i]->plasma->is_dead(game->monsters[i]->plasma)) {
+                    plasma_destroy(game->monsters[i]->plasma);
                     game->monsters[i]->plasma = NULL;
                 } else {
                     game->monsters[i]->plasma->tick(game->monsters[i]->plasma, map, (game->scroll_offset * 16) - 80, (game->scroll_offset * 16) + 400);
@@ -580,6 +586,7 @@ void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
         game->bullet->tick(game->bullet, map, (game->scroll_offset * 16), (game->scroll_offset * 16) + 320);
 
         if (game->bullet->is_dead(game->bullet)) {
+            bullet_destroy(game->bullet);
             game->bullet = NULL;
         }
     } else {
@@ -837,6 +844,7 @@ int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
             if (game->bullet != NULL) {
                 if (collision_detect(game->bullet->tile, game->monsters[idx]->tile)) {
                     if (game->monsters[idx]->on_fire != 1) {
+                        bullet_destroy(game->bullet);
                         game->bullet = NULL;
                         game->monsters[idx]->on_fire = 1;
                         g_soundfx->stop(g_soundfx);
@@ -860,6 +868,7 @@ int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
         if (game->monsters[idx] != NULL) {
             if (game->monsters[idx]->plasma != NULL) {
                 if (collision_detect(game->dave->tile, game->monsters[idx]->plasma->tile)) {
+                    plasma_destroy(game->monsters[idx]->plasma);
                     game->monsters[idx]->plasma = NULL;
                     game->dave->on_fire = 1;
                     g_soundfx->stop(g_soundfx);
@@ -1028,6 +1037,12 @@ int game_level_load(game_context_t *game, tile_t *map, char *file) {
     return 0;
 }
 
+static void clear_gameloop(game_context_t *game) {
+    clear_monsters(game);
+    dave_destroy(game->dave);
+    bullet_destroy(game->bullet);
+}
+
 int gameloop(int starting_level) {
     game_context_t* game;
     tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT];
@@ -1107,11 +1122,13 @@ int gameloop(int starting_level) {
 
         } else if (state == G_STATE_GAMEOVER) {
             SDL_UnlockTexture(g_texture);
+            clear_gameloop(game);
             free(game);
             return 2;
 
         } else if (state == G_STATE_QUIT_NOW) {
             SDL_UnlockTexture(g_texture);
+            clear_gameloop(game);
             free(game);
             return 1;
         }
