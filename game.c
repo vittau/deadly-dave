@@ -235,7 +235,7 @@ static void draw_tile_centered(tile_t *tile) {
 }
 
 /* The font tiles follow this order, 100 indices apart for the black set. */
-static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?";
+static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?-'";
 
 static void draw_char(char c, int x, int y, int is_black) {
     const char *letter = memchr(font_chars, c, sizeof(font_chars) - 1);
@@ -373,7 +373,9 @@ static void draw_scrollable_area(game_context_t *game, tile_t *map) {
 static void draw_intermission_text(int levels_to_go) {
     char text[128];
 
-    if (levels_to_go <= 1) {
+    if (levels_to_go <= 0) {
+        snprintf(text, sizeof(text), "YES! YOU FINISHED THE GAME!");
+    } else if (levels_to_go == 1) {
         snprintf(text, sizeof(text), "THIS IS THE LAST LEVEL!!!");
     } else {
         snprintf(text, sizeof(text), "GOOD WORK! ONLY %d MORE TO GO!", levels_to_go);
@@ -1496,6 +1498,26 @@ static int game_level_has_secret(int level) {
     return 0;
 }
 
+/*
+ * Where a warp zone hands Dave back when its door is reached. Taken from the
+ * original: a warp drops him into the next level that has a warp zone, and
+ * level 10's wraps around to level 3 (5->8, 8->9, 9->10, 10->3).
+ */
+static int game_warp_exit_level(int level) {
+    switch (level) {
+    case 5:
+        return 8;
+    case 8:
+        return 9;
+    case 9:
+        return 10;
+    case 10:
+        return 3;
+    default:
+        return level + 1;
+    }
+}
+
 static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     dave_t *dave = game->dave;
     if (keys->quit) {
@@ -1698,15 +1720,16 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (game->dave->tile->x > (DISPLAY_BASE_WIDTH - 20) ||
             game->dave->tile->x > ((int)game->level_columns * TILE_SIZE) - 20) {
         if (game->level_secret_state == SECRET_LEVEL_ENTER) {
-            game->level_secret_state = SECRET_LEVEL_VISITED;
+            /* A warp zone's door hands Dave back to a fixed level. */
+            game->level = game_warp_exit_level((int)game->level);
         } else {
             game->level++;
-            game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
-            /* The last level's door ends the game instead of loading level 11. */
-            if (game->level > TOTAL_LEVELS) {
-                game->dave->mute = 0;
-                return G_STATE_GAMEOVER;
-            }
+        }
+        game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
+        /* The last level's door rolls the ending instead of loading level 11. */
+        if (game->level > TOTAL_LEVELS) {
+            game->dave->mute = 0;
+            return G_STATE_CONGRATS;
         }
         game->dave->mute = 0;
         return G_STATE_NONE;
@@ -1733,7 +1756,12 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         tile_create_label_zone(&zone_label, 200 + display_center_offset(), 92);
         draw_tile(&warp_label);
         draw_tile(&zone_label);
-    } else {
+    } else if (game->level_secret_state != SECRET_LEVEL_ENTER) {
+        /*
+         * Only the corridor that follows a level's door carries the countdown.
+         * The one that closes a warp zone has no banner: the warp is a detour,
+         * not a level of its own, and the count would be wrong anyway.
+         */
         draw_intermission_text(TOTAL_LEVELS - game->level);
     }
 
@@ -1877,12 +1905,72 @@ static void game_load_current_level(game_context_t *game, tile_t *map) {
     game_set_scroll_to_dave(game);
 }
 
+/*
+ * The ending screen, shown once the last level is done: the text the original
+ * puts in the executable, inside a frame of grails (the trophies that open a
+ * level's door). Any key or pad button starts a fresh run on level 5.
+ */
+static int game_congrats(game_context_t *game, keys_state_t *keys) {
+    static const char *lines[] = {
+        "CONGRATULATIONS!",
+        "",
+        "YOU MADE IT THROUGH ALL THE PERIL-",
+        "OUS AREAS IN CLYDE'S HIDEOUT!",
+        "",
+        "VERY GOOD WORK! DID YOU FIND",
+        "THE 4 WARP ZONES? THEY ARE LOCATED",
+        "ON LEVELS 5,8,9 AND 10. JUST JUMP",
+        "OFF THE TOP OF THE SCREEN AT THE",
+        "EXTREME LEFT OR RIGHT EDGE OF THE",
+        "WORLD AND VOILA! YOU'RE THERE!",
+        "",
+        "PRESS ANY BUTTON"
+    };
+
+    if (keys->quit) {
+        return G_STATE_QUIT_NOW;
+    }
+
+    clear_screen();
+
+    /* A frame of grails around the picture, with their glow animation. */
+    {
+        static const int grail[] = {
+            SPRITE_IDX_TROPHY0, SPRITE_IDX_TROPHY1, SPRITE_IDX_TROPHY2,
+            SPRITE_IDX_TROPHY3, SPRITE_IDX_TROPHY4
+        };
+        static int tick = 0;
+        int frame = grail[(tick++ / 10) % 5];
+
+        for (int x = 0; x < display_width(); x += TILE_SIZE) {
+            render_tile_idx(frame, x, DISPLAY_SCENE_TOP);
+            render_tile_idx(frame, x, DISPLAY_SCENE_BOTTOM - TILE_SIZE);
+        }
+        for (int y = DISPLAY_SCENE_TOP + TILE_SIZE; y < DISPLAY_SCENE_BOTTOM - TILE_SIZE; y += TILE_SIZE) {
+            render_tile_idx(frame, 0, y);
+            render_tile_idx(frame, display_width() - TILE_SIZE, y);
+        }
+    }
+
+    for (int i = 0; i < (int)(sizeof(lines) / sizeof(lines[0])); i++) {
+        draw_text_line_centered(lines[i], 44 + (i * 10));
+    }
+
+    if (keys->enter || keys->space || keys->jump || keys->fire || keys->jetpack ||
+            keys->climb_up || keys->down || keys->left || keys->right ||
+            keys->key_y || keys->key_n) {
+        game->level = 5;
+        game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
+        return G_STATE_NONE;
+    }
+    return G_STATE_CONGRATS;
+}
+
 static void clear_gameloop(game_context_t *game) {
     clear_monsters(game);
     dave_destroy(game->dave);
     bullet_destroy(game->bullet);
 }
-
 /*
  * One 14 ms logic step of the game: it advances the state it is given and
  * draws the result into g_pixels, which is exactly what it did when the loop
@@ -1946,6 +2034,9 @@ static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_
 
     } else if (state == G_STATE_WARP_POPUP) {
         next_state = game_warp_popup(game, map, key_state);
+
+    } else if (state == G_STATE_CONGRATS) {
+        next_state = game_congrats(game, key_state);
     }
 
     return next_state;

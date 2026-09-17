@@ -22,10 +22,10 @@
 #define G_STATE_WARP_POPUP        8
 #define G_STATE_GAMEOVER          9
 #define G_STATE_QUIT_NOW          10
+#define G_STATE_CONGRATS          11
 
 #define SECRET_LEVEL_NOT_VISITED 0
 #define SECRET_LEVEL_ENTER 1
-#define SECRET_LEVEL_VISITED 2
 
 #define WARP_NONE  0
 #define WARP_RIGHT 1

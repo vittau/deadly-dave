@@ -63,7 +63,9 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
   warps are the `levelN_secret.ddt` files, loaded when Dave walks off the level
   edge (`game_level_has_secret()`); the rest of a chunk is plain level. A secret
   file is the same full 100-column chunk with `D` on the warp start column, so
-  the two definitions of a chunk are duplicates on purpose.
+  the two definitions of a chunk are duplicates on purpose. A warp's own door
+  hands Dave back to a fixed level with no intermission banner (`game_warp_exit_level()`:
+  5->8, 8->9, 9->10, 10->3).
 - A `.ddt` is the chunk transposed: one line per column, a comma separated tag
   per row, `;` at the end. A line carries 11 tags and the first is the row that
   hides behind the top HUD bar, so tag `T` in line `L` is column `L`, row `T-1`.
@@ -86,6 +88,11 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
   vgmaps map, `https://vgmaps.de/files/pc/maps/dangerous-dave-in-the-deserted-pirates-hideout-level-NN-pc-map.webp`
   (`NN` 01..10; needs a browser User-Agent), which confirms the tile layer but
   draws the monsters by hand and is 150px tall, so it cuts the bottom row.
+- The font is 8x6 glyph tiles: `res/font/<name>.bmp` is `res/tiles/tile(500+index).bmp`
+  (white glyph on transparent) and `res/font/black/<name>.bmp` is
+  `tile(600+index).bmp` (black glyph on white), `index` being the glyph's place
+  in `font_chars[]` (`A-Z`, `0-9`, space, `, . ( ) ! ? - '`). A new glyph needs
+  both BMPs and the character appended to `font_chars[]`.
 
 ## Gotchas
 
