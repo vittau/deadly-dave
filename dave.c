@@ -626,10 +626,16 @@ static void dave_state_standing_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH *
 }
 
 static void dave_tick(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
-        int key_left, int key_right, int key_up, int key_down, int key_jetpack) {
+        int key_left, int key_right, int key_up, int key_climb_up, int key_down, int key_jetpack) {
     /* The frame the jump key goes down, used to start a jump from the ground. */
     dave->jump_pressed = (key_up != 0) && (dave->key_up_prev == 0);
     dave->key_up_prev = (key_up != 0);
+
+    /*
+     * Everything that reads the up input to move Dave up, climbing a vine or
+     * flying, also accepts the controller's up, which never jumps.
+     */
+    key_up = key_up || key_climb_up;
 
     if (dave->state == DAVE_STATE_STANDING) {
         dave_state_standing_routine(dave, map, key_left, key_right, key_up, key_jetpack);

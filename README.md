@@ -17,6 +17,22 @@ Main focus:
 | Shoot         | `Space`, or left Ctrl       |
 | Jetpack       | `J`                         |
 
+A controller works as well, through SDL's gamepad API, so the buttons are in the
+same place whatever the system or the pad:
+
+| Action        | Controller                            |
+| ------------- | ------------------------------------- |
+| Move          | left stick or D-pad left / right      |
+| Climb up      | left stick or D-pad up (never jumps)  |
+| Climb down    | left stick or D-pad down              |
+| Jump          | `A`                                   |
+| Jetpack       | `B`                                   |
+| Shoot         | `X`, or right shoulder                |
+| Quit popup    | `Start` (the Escape key)              |
+
+The up direction only climbs and flies: on a pad jumping whenever the stick or
+the D-pad went up would be unplayable, so only `A` jumps.
+
 ### Building
 
 The game needs **SDL 3.4.16** or newer and nothing else.

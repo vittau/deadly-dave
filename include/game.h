@@ -47,6 +47,8 @@
 
 typedef struct keys_state_struct {
     int32_t jump;
+    /* Up without jumping: only climbs and flies, used by the controller's up. */
+    int32_t climb_up;
     int32_t left;
     int32_t right;
     int32_t down;

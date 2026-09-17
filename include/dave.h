@@ -76,7 +76,7 @@ typedef struct dave_struct {
     int default_y;
 
     void (*tick)(struct dave_struct *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
-        int left, int right, int up, int down, int jetpack);
+        int left, int right, int up, int climb_up, int down, int jetpack);
     int (*is_dead)(struct dave_struct *dave);
 } dave_t;
 

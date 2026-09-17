@@ -21,6 +21,7 @@ uint32_t *g_pixels;
 int g_pixels_pitch = DISPLAY_BASE_WIDTH;
 assets_t *g_assets;
 soundfx_t *g_soundfx;
+SDL_Gamepad *g_gamepad;
 
 void render_tile_idx(int tile_idx, int x, int y) {
     SDL_Surface *surface = g_assets->imgdata[tile_idx];
@@ -404,6 +405,84 @@ static void toggle_fullscreen(void) {
     SDL_SyncWindow(g_window);
 }
 
+/*
+ * Controllers go through SDL's gamepad API, so an Xbox pad on Windows (XInput),
+ * a DualSense on Linux or a Switch Pro controller all report the same buttons:
+ * A is SOUTH, B is EAST, X is WEST and Start is START.
+ *
+ * The left stick and the D-pad move Dave, A jumps, B toggles the jetpack, X
+ * shoots and Start is the Escape key. The stick axes rest at zero and the
+ * D-pad reports one button at a time, so a dead zone is only needed for the
+ * stick.
+ *
+ * The up direction is special. On the keyboard up jumps, which is faithful to
+ * the original and works, but on a pad jumping whenever the stick or the D-pad
+ * went up would be unplayable, so up only climbs and flies there and A is the
+ * only jump. A, like the keyboard jump key, also climbs up a vine.
+ */
+#define GAMEPAD_DEAD_ZONE 8000
+
+static void gamepad_open(void) {
+    SDL_JoystickID *ids;
+    int count = 0;
+
+    if (g_gamepad != NULL) {
+        return;
+    }
+
+    ids = SDL_GetGamepads(&count);
+    if (ids == NULL) {
+        return;
+    }
+
+    if (count > 0) {
+        g_gamepad = SDL_OpenGamepad(ids[0]);
+    }
+    SDL_free(ids);
+}
+
+static void gamepad_update(keys_state_t *state) {
+    Sint16 x, y;
+
+    if (g_gamepad == NULL) {
+        return;
+    }
+
+    x = SDL_GetGamepadAxis(g_gamepad, SDL_GAMEPAD_AXIS_LEFTX);
+    y = SDL_GetGamepadAxis(g_gamepad, SDL_GAMEPAD_AXIS_LEFTY);
+
+    state->left     |= (x < -GAMEPAD_DEAD_ZONE) || SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT);
+    state->right    |= (x >  GAMEPAD_DEAD_ZONE) || SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
+    state->down     |= (y >  GAMEPAD_DEAD_ZONE) || SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+    /* Up climbs and flies, only A is allowed to jump, see gamepad_update's note. */
+    state->climb_up |= (y < -GAMEPAD_DEAD_ZONE) || SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_DPAD_UP);
+    state->jump     |= SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
+    state->fire     |= SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_WEST) ||
+                       SDL_GetGamepadButton(g_gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
+}
+
+/* Handles the events that are a one shot in the game: the jetpack toggles, so
+ * holding the button must not flip it every frame, and Escape opens a popup. */
+static void gamepad_event(SDL_Event *event, keys_state_t *state) {
+    if (event->type == SDL_EVENT_GAMEPAD_ADDED) {
+        gamepad_open();
+
+    } else if (event->type == SDL_EVENT_GAMEPAD_REMOVED) {
+        if (g_gamepad != NULL && SDL_GetGamepadID(g_gamepad) == event->gdevice.which) {
+            SDL_CloseGamepad(g_gamepad);
+            g_gamepad = NULL;
+        }
+        gamepad_open();
+
+    } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+        if (event->gbutton.button == SDL_GAMEPAD_BUTTON_EAST) {
+            state->jetpack = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_START) {
+            state->escape = 1;
+        }
+    }
+}
+
 void get_keys(keys_state_t* state) {
     SDL_Event event;
 
@@ -423,6 +502,7 @@ void get_keys(keys_state_t* state) {
     state->key_n      = (keystate[SDL_SCANCODE_N] != 0) ? 1 : 0;
 
     state->jetpack = 0;
+    state->climb_up = 0;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_USER) {
             printf("user event \n");
@@ -456,8 +536,12 @@ void get_keys(keys_state_t* state) {
             }
         } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
+        } else {
+            gamepad_event(&event, state);
         }
     }
+
+    gamepad_update(state);
 }
 
 /*
@@ -899,7 +983,7 @@ int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     }
 
     // Tick dave, monsters, and all block tiles in map
-    game->dave->tick(game->dave, map, keys->left, keys->right, keys->jump, keys->down, keys->jetpack);
+    game->dave->tick(game->dave, map, keys->left, keys->right, keys->jump, keys->climb_up, keys->down, keys->jetpack);
 
     for (int i = 0; i < MAX_MONSTERS; i++) {
         if (game->monsters[i] != NULL) {
@@ -1078,9 +1162,9 @@ int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     }
 
     if (game->in_warp == WARP_RIGHT) {
-        game->dave->tick(game->dave, map, 0, 1, 0, 0, 0);
+        game->dave->tick(game->dave, map, 0, 1, 0, 0, 0, 0);
     } else {
-        game->dave->tick(game->dave, map, 0, 0, 0, 0, 0);
+        game->dave->tick(game->dave, map, 0, 0, 0, 0, 0, 0);
     }
     game_do_map(map);
 
@@ -1338,6 +1422,10 @@ static int game_shutdown(void) {
         unload_assets(g_assets);
         g_assets = NULL;
     }
+    if (g_gamepad != NULL) {
+        SDL_CloseGamepad(g_gamepad);
+        g_gamepad = NULL;
+    }
     display_quit();
     SDL_Quit();
     return 0;
@@ -1360,6 +1448,13 @@ int game_main(int is_windowed, int starting_level) {
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
         printf("Failed to initialize SDL audio. Error: (%s) \n", SDL_GetError());
         return -2;
+    }
+
+    /* A controller is optional, the game runs fine on the keyboard alone. */
+    if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD)) {
+        printf("Failed to initialize SDL gamepad. Error: (%s) \n", SDL_GetError());
+    } else {
+        gamepad_open();
     }
 
     /*
