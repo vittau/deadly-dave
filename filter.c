@@ -16,8 +16,8 @@
 
 /*
  * Scanline strength: the dark band keeps 1/2 of its value at most. The dimming
- * is weighted by luminance, as in CannonBall: a bright beam blooms into the gap
- * next to it and is dimmed the least, while a dark pixel is cut the most.
+ * is weighted by luminance: a bright beam blooms into the gap next to it and is
+ * dimmed the least, while a dark pixel is cut the most.
  */
 #define SCANLINE_SHIFT 1
 

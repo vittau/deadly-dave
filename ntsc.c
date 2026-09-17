@@ -2,10 +2,10 @@
  * Blargg-style NTSC/composite video filter for Deadly Dave.
  *
  * A scalar C99 port of the scalar path of Shay Green's snes_ntsc 0.2.2
- * <http://www.slack.net/~ant/>, following the CannonBall-SE adaptations for
- * 32-bit RGBA output. The SIMD, hi-res and field-merge paths are not ported:
- * the game renders at its native resolution and always simulates interlacing
- * by advancing the burst phase every frame.
+ * <http://www.slack.net/~ant/>, adapted to write 32-bit RGBA output. The SIMD,
+ * hi-res and field-merge paths are not ported: the game renders at its native
+ * resolution and always simulates interlacing by advancing the burst phase
+ * every frame.
  *
  * Copyright (C) 2006-2007 Shay Green. This module is free software; you can
  * redistribute it and/or modify it under the terms of the GNU Lesser General
@@ -30,10 +30,10 @@
 #define NTSC_EXT_DECODER_HUE (NTSC_STD_DECODER_HUE + 15)
 
 /*
- * Full 8-bit range per channel, which is what the original library uses. The
- * CannonBall-SE variant halves it (7 bits) to leave headroom for its doubled
- * hi-res pixels, and relies on a brightness-boost shader to bring the picture
- * back; this port has no such shader, so half range just renders the game dark.
+ * Full 8-bit range per channel, which is what the original library uses. A
+ * half-range variant (7 bits) leaves headroom for doubled hi-res pixels and
+ * needs a brightness boost elsewhere to bring the picture back, which this port
+ * has no place for: half range just renders the game dark.
  */
 #define NTSC_RGB_BITS   8
 #define NTSC_GAMMA_SIZE 256

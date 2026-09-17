@@ -5,7 +5,7 @@
 
 /*
  * Blargg-style NTSC/composite video filter, a scalar C99 port of the scalar
- * path of Shay Green's snes_ntsc 0.2.2, as adapted by CannonBall-SE.
+ * path of Shay Green's snes_ntsc 0.2.2.
  *
  * The filter takes 15-bit RGB555 pixels (one palette index per pixel) and
  * writes 32-bit RGBA8888 pixels. Each input pixel is expanded into output

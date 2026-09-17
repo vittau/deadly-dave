@@ -6,10 +6,10 @@ console sent to a television) and the **scanline** effect (the dark gaps between
 the picture lines of a CRT). It also explains how both are wired into Deadly
 Dave, and what a faithful port has to reproduce.
 
-The reference implementation studied for this document is
-`cannonball-dx` (CannonBall-SE), whose `src/main/sdl2/snes_ntsc.*` files are a
-heavily modified version of Shay Green's `snes_ntsc 0.2.2` library, and whose
-`src/main/sdl2/rendersurface.cpp` drives both effects.
+The NTSC filter is a port of Shay Green's `snes_ntsc 0.2.2` library (LGPL 2.1);
+the scanline pass is written for this game. This document is self-contained: it
+describes the algorithms from first principles, and the source files it names
+are the ones in this repository.
 
 ---
 
@@ -59,8 +59,9 @@ For every input pixel the filter models:
    - chroma gets a **gaussian** low-pass (the `bleed` value),
    - `artifacts` and `fringing` mix a little of each component into the other to
      recreate encoder cross-talk.
-3. **Horizontal rescale** from the input sampling grid to the composite grid.
-   The library uses a 3-in / 7-out chunk (`rescale_in 8`, `rescale_out 7`), so
+3. **Horizontal rescale** from the input sampling grid to the composite grid,
+   with `NTSC_RESCALE_IN 8` samples feeding `NTSC_RESCALE_OUT 7`. The blitter
+   walks the input three pixels at a time and emits seven composite columns, so
    each output pixel depends on the surrounding **six** input pixels.
 4. **YIQ -> RGB** through a decoder matrix, optionally hue-rotated per burst
    phase, then **clamp** to the output range.
@@ -76,27 +77,25 @@ every line:
 - Between frames it shifts by another 120 degrees, so a static screen actually
   alternates between two composite frames.
 
-`snes_ntsc` therefore keeps three kernels per pixel, one per burst phase, and
-the caller passes a `burst_phase` (0, 1 or 2) that is advanced every frame
-(`merge_fields = 0`). Turning on `merge_fields` averages the phases together:
-less flicker, but also less authentic shimmer. CannonBall and this port keep it
-**off** on purpose.
+The filter therefore keeps three kernels per pixel, one per burst phase, and
+`ntsc_blit()` takes a `burst_phase` (0, 1 or 2) that the caller advances every
+frame. Averaging the three phases together would flicker less but also shimmer
+less authentically, so this port never does it.
 
 ### 2.3 The precomputed kernel table
 
-Because the pipeline is linear, `snes_ntsc_init()` precomputes, for **every
+Because the pipeline is linear, `ntsc_create()` precomputes, for **every
 possible input colour**, the response of a single pixel on a black background,
 for each of the 3 burst phases and each of the 3 column alignments. That is
 **9 kernels**; each kernel holds the **14** output pixels the source pixel
 affects (7 output columns generated per 3 input columns, plus reach). The
-entries are stored as **signed packed RGB** (`PACK_RGB(r,g,b) =
-(r<<21)|(g<<11)|(b<<1)`, centred on `rgb_bias`), because a changed pixel can
-both raise and lower the neighbouring output values.
+entries are stored as **signed packed RGB** (`NTSC_PACK_RGB(r,g,b) =
+(r<<21)|(g<<11)|(b<<1)`, centred on `NTSC_RGB_BIAS`), because a changed pixel
+can both raise and lower the neighbouring output values.
 
-For the SNES palette (32768 colours, reduced to 8192 by dropping a bit from R
-and B) this is under 16 MB and a noticeable but one-off init cost. The table is
-the whole reason the filter runs in real time: at blit time it is only sums and
-a clamp.
+The table covers all 32768 RGB555 colours, which makes it about 16 MB and a
+noticeable but one-off init cost. The table is the whole reason the filter runs
+in real time: at blit time it is only sums and a clamp.
 
 ### 2.4 Blitting
 
@@ -116,8 +115,8 @@ for each row:
 ```
 
 The clamp is the classic branch-free trick, done on the packed signed value so
-all three channels are clamped at once (`SNES_NTSC_CLAMP_`), after which the
-channel bits are shifted into the output byte positions.
+all three channels are clamped at once (`NTSC_CLAMP_`), after which the channel
+bits are shifted into the output byte positions.
 
 ### 2.5 Presets
 
@@ -125,13 +124,12 @@ channel bits are shifted into the output byte positions.
 
 | Preset            | Look                                                         |
 | ----------------- | ------------------------------------------------------------ |
-| `snes_ntsc_composite` | Colour bleeding **and** artefacts (rainbow edges). Default NTSC. |
-| `snes_ntsc_svideo`    | Bleeding only, no cross-colour artefacts; sharper.        |
-| `snes_ntsc_rgb`       | Crisp, almost no analogue artefacts.                      |
+| `ntsc_composite`  | Colour bleeding **and** artefacts (rainbow edges). Default NTSC. |
+| `ntsc_svideo`     | Bleeding only, no cross-colour artefacts; sharper.           |
+| `ntsc_rgb`        | Crisp, almost no analogue artefacts.                        |
 
-The document in `cannonball-dx/docs/Blargg-NTSC-Filter-Concepts-and-Implementation.txt`
-collects Blargg's own forum posts describing all of the above; it is the best
-primary source next to the library header.
+Blargg's own forum posts describing all of the above are the best primary source
+next to the library header.
 
 ---
 
@@ -145,7 +143,7 @@ so the viewer sees dark bands between bright lines.
 The effect is purely a **vertical** operation on the finished image: dim or
 darken every other row.
 
-CannonBall implements it as follows (`rendersurface.cpp`):
+The scanline pass works as follows:
 
 - Applied **to the game image**, not to the final scaled window, so the lines
   align with the source pixels and scale up with the picture.
@@ -167,9 +165,10 @@ CannonBall implements it as follows (`rendersurface.cpp`):
 
 Deadly Dave keeps the luminance weighting, the `shift = 1` and the preserved
 alpha, with two changes. The luminance weight **saturates below full
-brightness** (`SCANLINE_MAX_LUM`), because CannonBall's "not dimmed at all"
-makes the lines disappear over the game's lighter artwork, and a faint trace
-over white reads better. And the bands are **half a game row** tall: a 320x200
+brightness** (`SCANLINE_MAX_LUM`): with the plain formula a maximum-brightness
+pixel is not dimmed at all, which makes the lines disappear over the game's
+lighter artwork, and a faint trace over white reads better. And the bands are
+**half a game row** tall: a 320x200
 picture is filtered as if it were shown on a 640x400 screen, with two bands per
 source row instead of one dark row per two. That is the partial-coverage case
 above, taken to the destination's own resolution:
@@ -251,9 +250,5 @@ runtime setting and is not written to disk.
 ## 5. References
 
 - Shay Green (Blargg), `snes_ntsc 0.2.2`, http://www.slack.net/~ant/ (LGPL 2.1).
-- Blargg's forum posts, collected in
-  `cannonball-dx/docs/Blargg-NTSC-Filter-Concepts-and-Implementation.txt`.
-- CannonBall-SE `src/main/sdl2/snes_ntsc.{h,cpp}`, `snes_ntsc_impl.h`,
-  `rendersurface.cpp`.
 - ModdingWiki, Dangerous Dave level format (for the surrounding game, not the
   filter): https://moddingwiki.shikadi.net/wiki/Dangerous_Dave_Level_format

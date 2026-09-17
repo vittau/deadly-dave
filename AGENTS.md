@@ -54,21 +54,21 @@ except the icons.
 `docs/CRT.md` explains the theory and the port in full. In short:
 
 - `ntsc.c` / `include/ntsc.h` is a scalar C99 port of Shay Green's `snes_ntsc`
-  0.2.2 (the same library CannonBall-SE uses), stripped of the SIMD, hi-res and
-  field-merge paths. It takes RGB555 palette indices and writes RGBA8888. The
-  palette table is 32768 entries × 128 words (~16 MB) and is built once by
-  `ntsc_create()`; that is a visible pause, so the game builds it lazily the
-  first time NTSC is enabled and only frees it in `filter_quit()`.
+  0.2.2, stripped of the SIMD, hi-res and field-merge paths. It takes RGB555
+  palette indices and writes RGBA8888. The palette table is 32768 entries × 128
+  words (~16 MB) and is built once by `ntsc_create()`; that is a visible pause,
+  so the game builds it lazily the first time NTSC is enabled and only frees it
+  in `filter_quit()`.
   It uses the library's full 8-bit internal range (`NTSC_RGB_BITS 8`). Do not
-  copy CannonBall's `rgb_bits 7` back in: that is half range, leaves headroom
-  for its doubled hi-res pixels and is compensated there by a brightness-boost
-  shader. With no shader here it just renders the game at half brightness
-  (midtones crushed, only saturated colours reaching full scale).
+  switch back to half range (`rgb_bits 7`): it leaves headroom for doubled
+  hi-res pixels and needs a brightness boost elsewhere to compensate, so with no
+  shader to do that it just renders the game at half brightness (midtones
+  crushed, only saturated colours reaching full scale).
 - `filter.c` / `include/filter.h` owns the `FILTERS` mode
   (OFF/SCANLINES/NTSC/BOTH), quantises the framebuffer to RGB555, runs the
   blitter, and applies the scanlines (luminance-weighted `>> 1`, alpha preserved,
-  like CannonBall, except the weight saturates at `SCANLINE_MAX_LUM` so white
-  keeps a faint trace instead of escaping the effect entirely).
+  except the weight saturates at `SCANLINE_MAX_LUM` so white keeps a faint trace
+  instead of escaping the effect entirely).
   The bands are **half a game row** tall, as if 320x200 were
   shown on a 640x400 screen, so the scanlines need more rows than the source:
   `filter_output_height(src, dst)` returns `2*src` when `dst` is a multiple of
