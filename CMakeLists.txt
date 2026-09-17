@@ -39,6 +39,9 @@ if (WIN32)
   # Embed assets/icon.ico in the executable, which is what Explorer shows.
   enable_language(RC)
   file(TO_NATIVE_PATH "${deadly-dave_SOURCE_DIR}/assets/icon.ico" ICON_PATH)
+  # rc.exe reads backslash escapes inside string literals, so a native path has
+  # to reach the .rc with every backslash doubled or it eats the next letter.
+  string(REPLACE "\\" "\\\\" ICON_PATH "${ICON_PATH}")
   configure_file("${deadly-dave_SOURCE_DIR}/assets/deadly-dave.rc.in"
                  "${deadly-dave_BINARY_DIR}/deadly-dave.rc" @ONLY)
   set(DEADLY_DAVE_RC "${deadly-dave_BINARY_DIR}/deadly-dave.rc")
