@@ -27,16 +27,27 @@ emulator and without anything to install.
 - **Keyboard or controller, together.** The keyboard keeps the feel of the
   original; a controller works out of the box and can be plugged in while
   playing.
+- **A pause menu with the settings that matter.** `Escape` (or `Start`) opens it
+  while playing or in a warp corridor: `V-SYNC` on/off, an `FPS LIMIT` of
+  30/60/120/refresh/unlimited, the `MODE` (full screen or windowed), the
+  `FILTERS` row and a `WARP` row that jumps straight to any level. `Up`/`Down`
+  moves, `Enter`/`Space` applies, `Escape` closes. The settings are per run and
+  are not saved.
+- **CRT filters.** The `FILTERS` row cycles the looks the game can be drawn
+  with: plain, scanlines, the Blargg NTSC composite filter (colour bleeding and
+  rainbow fringing), or both. The NTSC palette table is built the first time it
+  is selected, so later toggles are instant.
 - **Perfect on a Steam Deck.** On SteamOS it needs nothing installed: the
   screen is 1280x800, exactly 4x the original 320x200, so the picture is pixel
   perfect with no stretch and nothing is cut off. The built-in controls are
-  picked up as a gamepad (the title screen and the quit popup included), so it
+  picked up as a gamepad (the title screen and the pause menu included), so it
   plays the same in Gaming Mode, added as a non-Steam game, as on a desktop.
 - **Starts full screen.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere else,
-  switches between full screen and windowed. `-w` starts windowed instead.
+  switches between full screen and windowed. `-w` starts windowed instead, and
+  `-l <level>` starts on a given level.
 - **The whole game**, all ten levels and all four bonus warp zones, each one the
-  full original map, with the intro and the original sound effects decoded from
-  the game's own data.
+  full original map, with the intro, the ending screen and the original sound
+  effects decoded from the game's own data.
 
 ![Level 6](res/screenshots/screen3.png)
 
@@ -49,8 +60,8 @@ emulator and without anything to install.
 | Climb         | `W` / `S`, or up / down     | stick or D-pad up / down         |
 | Shoot         | `Space`, or left Ctrl       | `X`, or right shoulder           |
 | Jetpack       | `J`                         | `B`                              |
-| Quit popup    | `Escape`                    | `Start`                          |
-| In the popup  | `Y` / `N`                   | `A` quits, `B` goes back         |
+| Pause menu    | `Escape` opens it           | `Start` opens it                 |
+| In the menu   | `Up` / `Down` move, `Enter` / `Space` applies, `Escape` / `N` closes | stick or D-pad moves, `A` applies, `B` closes |
 
 On the keyboard up jumps, faithful to the original. On a pad it only climbs and
 flies, because jumping whenever a stick went up would be miserable, so there
