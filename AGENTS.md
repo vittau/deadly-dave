@@ -7,7 +7,8 @@ except the icons.
 ## Build and run
 
 - `make` builds `ddave` against the system SDL3 (`pkg-config sdl3`). Fast, use it
-  while iterating.
+  while iterating. It compiles with `-std=c99 -Wall` and is warning-free; there
+  is no linter, formatter or typecheck besides that.
 - CMake (`cmake -S . -B build -G Ninja && cmake --build build`) fetches and
   statically links SDL 3.4.16 and writes the binary to the repo root as
   `deadly-dave`. This is what CI and the releases use; configuring takes ~40s
@@ -15,14 +16,16 @@ except the icons.
 - The game `chdir`s to `SDL_GetBasePath()` and reads `res/` from there. Run it
   from the repo root (or from `Deadly Dave.app`); from anywhere else it prints
   "Could not find the game assets" and exits `-6`.
-- `make app` (macOS) builds the bundle, `make icon` regenerates `assets/icon.*`.
+- `make app` (macOS) builds the bundle. It copies the binary, so re-run it after
+  a rebuild to test the bundle. `make icon` regenerates `assets/icon.*`.
 
 ## Tests
 
-- `cd tests && make`, then `./tests/test_display`. It is pure (no window, no
-  SDL init) and always runnable.
-- `test_monster` opens a window and `test_invfreq` writes `out.raw`; both need a
-  real display and are not run in CI.
+- `cd tests && make`. `./tests/test_display` checks `display_compute_geometry`
+  (framebuffer width, scaling, centring) and is pure: run it after touching
+  `display.c`, and update its expected widths if the geometry changes.
+- `test_display` and `test_invfreq` (which writes `out.raw`) run headless.
+  `test_monster` opens a window and needs a real display, so CI runs none.
 
 ## Gotchas
 
