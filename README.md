@@ -7,6 +7,10 @@ Romero, that runs natively on the machines we actually use now. The same
 sprites, the same levels, the same sound effects and the same feel, without an
 emulator and without anything to install.
 
+> **Disclaimer:** the improvements in this fork were made possible by AI coding
+> agents, Claude Code and OpenCode (running DeepSeek models), working on top of
+> the sources below. Read the diff with that in mind.
+
 ## Why this one
 
 - **Native on Windows, macOS and Linux.** Every download is self-contained:
