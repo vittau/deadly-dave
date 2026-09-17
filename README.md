@@ -27,6 +27,11 @@ emulator and without anything to install.
 - **Keyboard or controller, together.** The keyboard keeps the feel of the
   original; a controller works out of the box and can be plugged in while
   playing.
+- **Perfect on a Steam Deck.** On SteamOS it needs nothing installed: the
+  screen is 1280x800, exactly 4x the original 320x200, so the picture is pixel
+  perfect with no stretch and nothing is cut off. The built-in controls are
+  picked up as a gamepad (the title screen and the quit popup included), so it
+  plays the same in Gaming Mode, added as a non-Steam game, as on a desktop.
 - **Starts full screen.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere else,
   switches between full screen and windowed. `-w` starts windowed instead.
 - **The whole game**, nine levels and the secret one, with the intro and the
