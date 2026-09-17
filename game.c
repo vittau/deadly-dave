@@ -34,6 +34,24 @@ assets_t *g_assets;
 soundfx_t *g_soundfx;
 SDL_Gamepad *g_gamepad;
 
+/* Sprites that are XORed over what is behind them instead of painted on top. */
+static const int blended_sprites[] = {
+    SPRITE_IDX_BULLET_RIGHT, SPRITE_IDX_BULLET_LEFT,
+    SPRITE_IDX_MONSTER_SUN1, SPRITE_IDX_MONSTER_SUN2,
+    SPRITE_IDX_MONSTER_SUN3, SPRITE_IDX_MONSTER_SUN4,
+    SPRITE_IDX_MONSTER_SPIDER1, SPRITE_IDX_MONSTER_SPIDER2,
+    SPRITE_IDX_MONSTER_SPIDER3, SPRITE_IDX_MONSTER_SPIDER4,
+    SPRITE_IDX_MONSTER_SWIRL1, SPRITE_IDX_MONSTER_SWIRL2,
+    SPRITE_IDX_MONSTER_SWIRL3, SPRITE_IDX_MONSTER_SWIRL4,
+    SPRITE_IDX_MONSTER_BONES1, SPRITE_IDX_MONSTER_BONES2,
+    SPRITE_IDX_MONSTER_BONES3, SPRITE_IDX_MONSTER_BONES4,
+    SPRITE_IDX_PLASMA_RIGHT1, SPRITE_IDX_PLASMA_RIGHT2, SPRITE_IDX_PLASMA_RIGHT3,
+    SPRITE_IDX_PLASMA_LEFT1, SPRITE_IDX_PLASMA_LEFT2, SPRITE_IDX_PLASMA_LEFT3,
+    SPRITE_IDX_MONSTER_UFO1, SPRITE_IDX_MONSTER_UFO2,
+    SPRITE_IDX_MONSTER_UFO3, SPRITE_IDX_MONSTER_UFO4
+};
+static uint8_t g_blended[1000];
+
 void render_tile_idx(int tile_idx, int x, int y) {
     SDL_Surface *surface = g_assets->imgdata[tile_idx];
 
@@ -41,53 +59,47 @@ void render_tile_idx(int tile_idx, int x, int y) {
         return;
     }
 
-    int blend = 0;
-    if (tile_idx == SPRITE_IDX_BULLET_RIGHT || tile_idx == SPRITE_IDX_BULLET_LEFT ||
-            tile_idx == SPRITE_IDX_MONSTER_SUN1 || tile_idx == SPRITE_IDX_MONSTER_SUN2 ||
-            tile_idx == SPRITE_IDX_MONSTER_SUN3 || tile_idx == SPRITE_IDX_MONSTER_SUN4 ||
-            tile_idx == SPRITE_IDX_MONSTER_SPIDER1 || tile_idx == SPRITE_IDX_MONSTER_SPIDER2 ||
-            tile_idx == SPRITE_IDX_MONSTER_SPIDER3 || tile_idx == SPRITE_IDX_MONSTER_SPIDER4 ||
-            tile_idx == SPRITE_IDX_MONSTER_SWIRL1 || tile_idx == SPRITE_IDX_MONSTER_SWIRL2 ||
-            tile_idx == SPRITE_IDX_MONSTER_SWIRL3 || tile_idx == SPRITE_IDX_MONSTER_SWIRL4 ||
-            tile_idx == SPRITE_IDX_MONSTER_BONES1 || tile_idx == SPRITE_IDX_MONSTER_BONES2 ||
-            tile_idx == SPRITE_IDX_MONSTER_BONES3 || tile_idx == SPRITE_IDX_MONSTER_BONES4 ||
-            tile_idx == SPRITE_IDX_PLASMA_RIGHT1 || tile_idx == SPRITE_IDX_PLASMA_RIGHT2 ||
-            tile_idx == SPRITE_IDX_PLASMA_RIGHT3 || tile_idx == SPRITE_IDX_PLASMA_LEFT1 ||
-            tile_idx == SPRITE_IDX_PLASMA_LEFT2 || tile_idx == SPRITE_IDX_PLASMA_LEFT3 ||
-            tile_idx == SPRITE_IDX_MONSTER_UFO1 || tile_idx == SPRITE_IDX_MONSTER_UFO2 ||
-            tile_idx == SPRITE_IDX_MONSTER_UFO3 || tile_idx == SPRITE_IDX_MONSTER_UFO4) {
-        blend = 1;
-    }
-
+    int blend = g_blended[tile_idx];
     int screen_width = display_width();
 
     for (int line_idx = 0; line_idx < surface->h; line_idx++) {
+        int dst_y = y + line_idx;
+
+        if (dst_y < 0 || dst_y >= DISPLAY_HEIGHT) {
+            continue;
+        }
+
+        const uint32_t *src = (const uint32_t *)((const uint8_t *)surface->pixels +
+            (size_t)line_idx * (size_t)surface->pitch);
+        uint32_t *dst = g_pixels + (size_t)dst_y * (size_t)g_pixels_pitch;
+
         for (int column_idx = 0; column_idx < surface->w; column_idx++) {
-            uint32_t pixel = ((uint32_t*)surface->pixels)[line_idx * surface->w + column_idx];
+            int dst_x = x + column_idx;
+            uint32_t pixel;
 
-            if ( (pixel & 0x000000FF) == 0) { // is a pixel totally transperant dont draw it
-            } else if (line_idx + y >= DISPLAY_HEIGHT) {
-            } else if (column_idx + x >= screen_width) {
-            } else if (column_idx + x < 0) {
-            } else {
-                if ( (line_idx + y) >= 0) {
-                    if (blend) {
-                        uint32_t oldpixel = g_pixels[(line_idx + y) * g_pixels_pitch + (column_idx + x)];
+            if (dst_x < 0 || dst_x >= screen_width) {
+                continue;
+            }
+            pixel = src[column_idx];
+            if ((pixel & 0x000000FF) == 0) { // a fully transparent pixel is not drawn
+                continue;
+            }
 
-                        if (oldpixel != 0x000000FF) {
-                            /*
-                             * XOR the colours but keep the sprite's alpha. The
-                             * alpha byte marks transparency, so mixing it with
-                             * the background would punch holes in the level
-                             * wherever a blended sprite touches it.
-                             */
-                            pixel = (pixel & 0x000000FF) |
-                                    ((pixel ^ oldpixel) & 0xFFFFFF00);
-                        }
-                    }
-                    g_pixels[(line_idx + y) * g_pixels_pitch + (column_idx + x)] = pixel;
+            if (blend) {
+                uint32_t oldpixel = dst[dst_x];
+
+                if (oldpixel != 0x000000FF) {
+                    /*
+                     * XOR the colours but keep the sprite's alpha. The
+                     * alpha byte marks transparency, so mixing it with
+                     * the background would punch holes in the level
+                     * wherever a blended sprite touches it.
+                     */
+                    pixel = (pixel & 0x000000FF) |
+                            ((pixel ^ oldpixel) & 0xFFFFFF00);
                 }
             }
+            dst[dst_x] = pixel;
         }
     }
 }
@@ -96,9 +108,7 @@ void clear_screen(void) {
     int screen_width = display_width();
 
     for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
-        for (int column_idx = 0; column_idx < screen_width; column_idx++) {
-            g_pixels[line_idx * g_pixels_pitch + column_idx] = 0x000000FF;
-        }
+        SDL_memset4(g_pixels + line_idx * g_pixels_pitch, 0x000000FF, (size_t)screen_width);
     }
 }
 
@@ -119,9 +129,7 @@ void clear_screen_band(int y, int height) {
     }
 
     for (int line_idx = y; line_idx < (y + height); line_idx++) {
-        for (int column_idx = 0; column_idx < screen_width; column_idx++) {
-            g_pixels[line_idx * g_pixels_pitch + column_idx] = 0x000000FF;
-        }
+        SDL_memset4(g_pixels + line_idx * g_pixels_pitch, 0x000000FF, (size_t)screen_width);
     }
 }
 
@@ -174,21 +182,14 @@ void draw_tile_centered(tile_t *tile) {
     render_tile_idx(tile->get_sprite(tile), tile->x + display_center_offset(), tile->y);
 }
 
-void draw_char(char c, int x, int y, int is_black) {
-    int tile_idx;
-    int letters_start_idx = (is_black) ? 600 : 500;
-    int letters[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', \
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', ',', '.', '(', \
-        ')', '!', '?'};
-    size_t count = sizeof(letters) / sizeof(letters[0]);
+/* The font tiles follow this order, 100 indices apart for the black set. */
+static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?";
 
-    for (size_t idx = 0; idx < count; idx++) {
-        if ((int)c == letters[idx]) {
-            tile_idx = letters_start_idx + idx;
-            render_tile_idx(tile_idx, x, y);
-            return;
-        }
+void draw_char(char c, int x, int y, int is_black) {
+    const char *letter = memchr(font_chars, c, sizeof(font_chars) - 1);
+
+    if (letter != NULL) {
+        render_tile_idx(((is_black) ? 600 : 500) + (int)(letter - font_chars), x, y);
     }
 }
 
@@ -262,20 +263,20 @@ void draw_map(game_context_t *game, tile_t *map) {
 }
 
 
-void draw_bullet_offset(bullet_t *bullet, assets_t *assets, int view_x) {
+void draw_bullet_offset(bullet_t *bullet, int view_x) {
     if (bullet == NULL) {
         return;
     }
     draw_tile_offset(bullet->tile, view_x);
 }
 
-void draw_dave_offset(dave_t *dave, assets_t *assets, int view_x) {
+void draw_dave_offset(dave_t *dave, int view_x) {
     if (dave->tile->get_sprite(dave->tile) != 0) {
         draw_tile_offset(dave->tile, view_x);
     }
 }
 
-void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], assets_t *assets, int view_x) {
+void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], int view_x) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
         if (monsters[i] == NULL) {
             continue;
@@ -298,9 +299,9 @@ void draw_scrollable_area(game_context_t *game, tile_t *map) {
     int view_x = game_view_x(game);
 
     draw_map(game, map);
-    draw_dave_offset(game->dave, g_assets, view_x);
-    draw_monsters_offset(game->monsters, g_assets, view_x);
-    draw_bullet_offset(game->bullet, g_assets, view_x);
+    draw_dave_offset(game->dave, view_x);
+    draw_monsters_offset(game->monsters, view_x);
+    draw_bullet_offset(game->bullet, view_x);
 }
 
 void draw_x_levels_to_go(int x) {
@@ -469,6 +470,10 @@ int load_assets(void) {
      * Nothing loaded means the artwork is not next to the binary. Fail with a
      * message instead of drawing with no tiles at all.
      */
+    for (size_t i = 0; i < sizeof(blended_sprites) / sizeof(blended_sprites[0]); i++) {
+        g_blended[blended_sprites[i]] = 1;
+    }
+
     if (loaded == 0) {
         printf("Could not find the game assets in 'res/tiles'. \n");
         printf("The 'res' directory has to sit next to the executable. \n");
@@ -853,7 +858,7 @@ int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *keys) {
  *  |                   .                 .                    |
  *  +-------------------+                 +--------------------+
  */
-int game_adjust_scroll_to_dave(game_context_t *game, dave_t *dave) {
+int game_adjust_scroll_to_dave(game_context_t *game) {
     int screen_width = display_width();
     /*
      * Last column the viewport may start at, so that it never scrolls past the
@@ -911,8 +916,8 @@ int game_adjust_scroll_to_dave(game_context_t *game, dave_t *dave) {
     }
 }
 
-void game_set_scroll_to_dave(game_context_t *game, dave_t *dave) {
-    while (game_adjust_scroll_to_dave(game, dave) != 0) {};
+void game_set_scroll_to_dave(game_context_t *game) {
+    while (game_adjust_scroll_to_dave(game) != 0) {};
 }
 
 void game_do_map(tile_t *map) {
@@ -923,7 +928,7 @@ void game_do_map(tile_t *map) {
     }
 }
 
-void game_do_plasmas(game_context_t *game, tile_t *map, keys_state_t *keys) {
+void game_do_plasmas(game_context_t *game, tile_t *map) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
         if (game->monsters[i] != NULL) {
             if (game->monsters[i]->plasma != NULL) {
@@ -1066,9 +1071,9 @@ int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *keys) {
 
     clear_screen();
     draw_map(game, map);
-    draw_monsters_offset(game->monsters, g_assets, game_view_x(game));
+    draw_monsters_offset(game->monsters, game_view_x(game));
     if (game->blinking_timer >= 11 && game->blinking_timer <= 20) {
-        draw_dave_offset(dave, g_assets, game_view_x(game));
+        draw_dave_offset(dave, game_view_x(game));
     }
     draw_level_frame(game);
 
@@ -1096,7 +1101,7 @@ int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
 
 
     // If we need to adjust screen by scrolling, just draw scene without progressing any game objects.
-    if (game_adjust_scroll_to_dave(game, game->dave)) {
+    if (game_adjust_scroll_to_dave(game)) {
         clear_screen();
         draw_scrollable_area(game, map);
         draw_level_frame(game);
@@ -1114,7 +1119,7 @@ int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     }
 
     game_do_map(map);
-    game_do_plasmas(game, map, keys);
+    game_do_plasmas(game, map);
     game_do_bullets(game, map, keys);
 
     if (dave->is_dead(game->dave)) {
@@ -1474,7 +1479,7 @@ int gameloop(int starting_level) {
             game->dave->tile->y = game->dave->default_y;
             game->scroll_offset = 0;
             game->blinking_timer = 0;
-            game_set_scroll_to_dave(game, game->dave);
+            game_set_scroll_to_dave(game);
             next_state = G_STATE_LEVEL_BLINKING;
 
         } else if (state == G_STATE_LEVEL_BLINKING) {
