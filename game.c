@@ -71,7 +71,11 @@ static const int blended_sprites[] = {
     SPRITE_IDX_PLASMA_RIGHT1, SPRITE_IDX_PLASMA_RIGHT2, SPRITE_IDX_PLASMA_RIGHT3,
     SPRITE_IDX_PLASMA_LEFT1, SPRITE_IDX_PLASMA_LEFT2, SPRITE_IDX_PLASMA_LEFT3,
     SPRITE_IDX_MONSTER_UFO1, SPRITE_IDX_MONSTER_UFO2,
-    SPRITE_IDX_MONSTER_UFO3, SPRITE_IDX_MONSTER_UFO4
+    SPRITE_IDX_MONSTER_UFO3, SPRITE_IDX_MONSTER_UFO4,
+    SPRITE_IDX_MONSTER_GREEN_DISK1, SPRITE_IDX_MONSTER_GREEN_DISK2,
+    SPRITE_IDX_MONSTER_GREEN_DISK3, SPRITE_IDX_MONSTER_GREEN_DISK4,
+    SPRITE_IDX_MONSTER_SILVER_DISK1, SPRITE_IDX_MONSTER_SILVER_DISK2,
+    SPRITE_IDX_MONSTER_SILVER_DISK3, SPRITE_IDX_MONSTER_SILVER_DISK4
 };
 static uint8_t g_blended[1000];
 
@@ -362,10 +366,19 @@ static void draw_scrollable_area(game_context_t *game, tile_t *map) {
     draw_bullet_offset(game->bullet, view_x);
 }
 
-static void draw_x_levels_to_go(int x) {
-    char good_work[128];
-    snprintf(good_work, sizeof(good_work), "GOOD WORK! ONLY %d MORE TO GO!", x);
-    draw_text_line(good_work, 50 + display_center_offset(), 58);
+/*
+ * The intermission banner behind the warp corridor: the number of levels left,
+ * except on the corridor that leads into the last one, which gets its own line.
+ */
+static void draw_intermission_text(int levels_to_go) {
+    char text[128];
+
+    if (levels_to_go <= 1) {
+        snprintf(text, sizeof(text), "THIS IS THE LAST LEVEL!!!");
+    } else {
+        snprintf(text, sizeof(text), "GOOD WORK! ONLY %d MORE TO GO!", levels_to_go);
+    }
+    draw_text_line(text, 50 + display_center_offset(), 58);
 }
 
 static void draw_jetpack(int bars) {
@@ -386,8 +399,9 @@ static void draw_level_number(int level) {
     int offset = display_center_offset();
 
     render_tile_idx(136, 104 + offset, 0);
-    render_tile_idx(148, 176 + offset, 0);
-    render_tile_idx(148 + level, 184 + offset, 0);
+    /* The HUD always shows two digits, "01" through "10". */
+    render_tile_idx(148 + (level / 10), 176 + offset, 0);
+    render_tile_idx(148 + (level % 10), 184 + offset, 0);
 }
 
 static void draw_lives(int lives) {
@@ -417,8 +431,8 @@ static void draw_score(int score) {
 #define PAUSE_OPTION_QUIT  4
 #define PAUSE_OPTION_COUNT 5
 
-/* Levels on disk, res/levels/level1.ddt through level9.ddt; WARP cycles through them. */
-#define TOTAL_LEVELS 9
+/* Levels on disk, res/levels/level1.ddt through level10.ddt; WARP cycles through them. */
+#define TOTAL_LEVELS 10
 
 static void pause_menu_option_text(game_context_t *game, int option, char *out, size_t out_size) {
     switch (option) {
@@ -1684,6 +1698,11 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         } else {
             game->level++;
             game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
+            /* The last level's door ends the game instead of loading level 11. */
+            if (game->level > TOTAL_LEVELS) {
+                game->dave->mute = 0;
+                return G_STATE_GAMEOVER;
+            }
         }
         game->dave->mute = 0;
         return G_STATE_NONE;
@@ -1711,7 +1730,7 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         draw_tile(&warp_label);
         draw_tile(&zone_label);
     } else {
-        draw_x_levels_to_go(9 - game->level);
+        draw_intermission_text(TOTAL_LEVELS - game->level);
     }
 
     return G_STATE_WARP;
@@ -1778,6 +1797,12 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                         monsters_count++;
                     } else if (strcmp(tag, "GD1") == 0) {
                         game->monsters[monsters_count] = monster_create_guard(cur_col * 16, pos * 16);
+                        monsters_count++;
+                    } else if (strcmp(tag, "GRD") == 0) {
+                        game->monsters[monsters_count] = monster_create_green_disk(cur_col * 16, pos * 16);
+                        monsters_count++;
+                    } else if (strcmp(tag, "SLV") == 0) {
+                        game->monsters[monsters_count] = monster_create_silver_disk(cur_col * 16, pos * 16);
                         monsters_count++;
                     }
 

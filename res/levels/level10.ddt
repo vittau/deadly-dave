@@ -1,0 +1,119 @@
+# Original Dangerous Dave Level 10
+# Tiles:
+# [DRT]: dirt brick      [RBK]: red brick       [PPK]: purple platform
+# [PIR]: pipe right      [PID]: pipe down       [BBK]: blue brick
+# [FR1]: fire, type1     [FR2]: fire, type2     [FR3]: fire, type3
+# [WT1]: water, type1    [WT2]: water, type2    [WT3]: water, type3
+# [WT4]: water, type4    [WT5]: water, type5    [PPF]: purple fake platform
+# [VI1]: vines, type1    [VI2]: vines, type2    [VI3]: vines, type3
+# [VI4]: vines, type4    [PCK]: purple column   [BIM]: metal beam
+# [BCM]: blue brick
+#
+# Items:
+# [ * ]: purple circle   [ v ]: blue diamond    [ V ]: red diamond
+# [ W ]: crown           [ ! ]: scepter         [ Y ]: grail
+# [ O ]: ring            [JPK]: jetpack         [GUN]: gun
+#
+# Special:
+# [ D ]: dave            [ X ]: door
+# [GRD]: green disk      [SLV]: silver disk
+   ,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK;
+   ,RBK, V ,   ,   ,BIM,   ,BIM,   ,PIR,RBK;
+   ,RBK,   ,   ,BIM,   ,   ,   ,BIM, D ,RBK;
+   ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,RBK;
+   ,RBK,   ,   ,   ,   ,BIM,   ,   ,   ,RBK;
+   ,RBK,   ,   ,BIM,   ,RBK,RBK,RBK,RBK,RBK;
+   ,RBK,   ,   ,   ,   ,   ,   ,WT1,WT1,RBK;
+   ,RBK, V ,   ,   ,   ,   ,   ,WT1,WT1,RBK;
+   ,RBK,RBK,RBK,RBK,   ,RBK,RBK,RBK,RBK,RBK;
+   ,   ,   ,VI1,RBK,   ,RBK,   ,   ,   ,RBK;
+   ,   , v ,VI1,RBK,   ,   ,   ,RBK,   ,   ;
+   ,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK;
+   ,RBK,   ,STR,   ,   ,   ,STR,   ,   ,RBK;
+   ,RBK,   ,   ,STR,   ,   ,   ,STR,   ,RBK;
+   ,RBK,   ,RBK,   ,   ,STR,   ,   ,   ,RBK;
+   ,RBK, X ,RBK,   ,   ,   ,   ,   ,   ,RBK;
+   ,RBK,   ,RBK,   , v ,   , * ,STR,   ,RBK;
+   ,RBK,STR,STR,   ,STR,   ,   ,   ,   ,RBK;
+   ,RBK,   ,   ,STR,   ,   ,   ,   , * ,RBK;
+   ,RBK,RBK,RBK,RBK,RBK,RBK,   ,RBK,RBK,RBK;
+   ,   ,   ,BBK, ! , W ,RBK,   ,   ,   ,RBK;
+   ,   ,   ,BBK, ! , W ,RBK,RBK,RBK,   ,RBK;
+   ,   ,   ,BBK,   ,   ,VI1, v ,   ,   ,RBK;
+   ,   ,   ,   ,   ,   ,VI1,   ,   ,RBK,RBK;
+   ,   ,   ,   ,   , * ,RBK,   ,   ,PPF,FR1;
+   ,   ,   ,   ,   ,   ,VI1,   ,   ,PPK,FR1;
+   ,   ,   ,   ,   ,BBK,RBK,   ,   ,PPK,FR1;
+   ,BBK,BBK,BBK,   ,BBK,RBK, v ,   ,PPF,FR1;
+   ,BBK,   ,   ,   ,BBK,RBK,   ,   ,PPK,FR1;
+   ,BBK,   ,BBK,BBK,BBK,RBK, v ,   ,RBK,RBK;
+   ,BBK,   ,   ,   ,   ,RBK,   ,   ,VI1,RBK;
+   ,BBK,   ,   ,   , * ,RBK,TR1,TR1,TR1,RBK;
+   ,BBK,   ,   ,BBK,   ,RBK,TR1,TR1,TR1,RBK;
+   ,BBK,   ,   ,BBK,   ,RBK,TR1,TR1,TR1,RBK;
+   ,BBK, v ,   ,BBK,   ,RBK,TR1,TR1,TR1,RBK;
+   ,BBK,   ,   ,BBK,   ,RBK,RBK,TR1,TR1,RBK;
+   ,BBK,   ,   ,BBK,   ,   ,RBK,RBK,TR1,RBK;
+   ,BBK,   ,   ,   ,BBK,   ,   ,RBK,   ,RBK;
+   ,BBK,   , v ,   ,VI1,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,   ,BBK,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,BBK,BBK,BBK,BBK, * ,RBK, * ,RBK;
+   ,BBK,   ,   ,PPK, V ,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,PPF,VI1,BBK, * ,RBK, * ,RBK;
+   ,BBK,   ,   ,PPF,   ,BBK,   ,RBK,SLV,RBK;
+   ,BBK,   ,   ,PPK,VI1,BBK, * ,RBK, * ,RBK;
+   ,BBK,   ,   ,PPK, V ,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,PPK,VI1,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,PPF, V ,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,PPK,VI1,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,PPF,   ,BBK,   ,RBK,   ,RBK;
+   ,BBK,   ,   ,PPK,VI1,BBK,GUN,FR1,   ,RBK;
+   ,BBK,   ,SLV,PPK, W ,BBK,   ,FR1,   ,RBK;
+   ,BBK,   ,   ,PPF,VI1,BBK,   ,FR1,   ,RBK;
+   ,BBK,   ,   ,PPF,VI1,BBK,BBK,BBK,   ,RBK;
+   ,BBK,BBK,BBK,   ,BBK,BBK,   ,BBK,   ,RBK;
+   ,BBK, W ,BBK,   ,   ,BBK,   ,   ,   ,RBK;
+   ,BBK,   ,   ,   ,   ,BBK, O ,BBK,   ,RBK;
+   ,BBK,   ,   ,   ,BBK,BBK,BBK,BBK,   ,RBK;
+   ,BBK,   ,BBK,   ,BBK, v ,   ,   ,   ,RBK;
+   ,BBK, * ,BBK,   ,BBK,   ,DRT,   ,RBK,RBK;
+   ,BBK,DRT,   ,   ,BBK,   ,DRT,   ,   ,RBK;
+   ,DRT,   ,   ,   ,FR1,   ,DRT,DRT,   ,RBK;
+   , * ,   ,   ,   ,   ,   ,   ,   ,   ,RBK;
+   ,DRT,   ,   ,   ,FR1,   ,RBK,RBK,RBK,RBK;
+   ,BBK,DRT,   ,   ,BBK,   ,JPK,   ,   ,BBK;
+   ,BBK, W ,BBK,SLV,BBK,   ,BBK,   ,   ,BBK;
+   ,BBK,   ,BBK,   ,BBK,   ,BBK,   ,   ,BBK;
+   ,BBK,   ,   ,   ,   ,   ,   ,   ,   ,BBK;
+   ,BBK,BBK,BBK,BBK,BBK,BBK,BBK,BBK,   ,BBK;
+   ,BBK,BBK,   ,   , v ,BBK,   ,   ,   ,BBK;
+   ,BBK, v ,   ,BBK,   ,   , v ,BBK, v ,BBK;
+   ,BBK,   ,BBK,BBK,BBK,BBK,BBK,BBK,BBK,BBK;
+   ,BBK,   ,   ,   ,FR1,   ,   ,   ,   ,FR1;
+   ,BBK,   ,   ,   ,DRT,   ,DRT,DRT,   ,BBK;
+   ,BBK,BBK,BBK,   ,DRT,   ,DRT,   ,   ,BBK;
+   ,BBK,   ,   ,   ,DRT,   ,DRT, * ,   ,BBK;
+   ,BBK, v ,   ,   ,WT1,   ,DRT,   ,   ,FR1;
+   ,BBK,   ,   ,   ,WT1,   ,DRT,   ,   ,BBK;
+   ,BBK, v ,   ,   ,WT1,   ,DRT, * ,   ,BBK;
+   ,BBK,   ,   ,   ,WT1,   ,DRT,   ,   ,FR1;
+   ,BBK, v ,   ,   ,WT1,   ,DRT,   ,   ,BBK;
+   ,BBK,   ,   ,   ,DRT,   ,DRT, * ,   ,BBK;
+   ,BBK,   ,DRT,DRT,DRT,SLV,DRT,   ,   ,FR1;
+   ,BBK,   ,   ,DRT,DRT,   ,DRT,   ,   ,BBK;
+   ,BBK,   ,   ,   ,DRT,   ,DRT, * ,   ,BBK;
+   ,BBK, V ,DRT,   ,   ,   ,DRT,   ,   ,FR1;
+   ,BBK,DRT,DRT,DRT,DRT,DRT,DRT,   ,   ,DRT;
+   ,BBK,DRT,DRT,DRT,DRT,DRT,DRT,   ,   ,DRT;
+   ,BBK, * , * , * , * ,   ,   ,   ,   ,DRT;
+   ,BBK, O ,PPF, * , * ,   ,   ,   ,   ,WT1;
+   ,BBK, * , * , * , * ,   ,   ,PPK,   ,WT1;
+   ,BBK, ! ,PPF, * ,PPF,   ,   ,PPK,   ,WT1;
+   ,BBK, * , * , * , * ,   ,PPF,   ,   ,DRT;
+   ,BBK, * , * , * , * ,PPF,   ,   ,   ,WT1;
+   ,BBK,   ,   ,PPF,   ,   ,   ,PPK,   ,WT1;
+   ,BBK,   ,   ,   ,   ,   ,PPF,PPK,   ,WT1;
+   ,   ,   ,PPF,   ,PPF,   ,   ,   ,   ,WT1;
+   ,   ,   ,   ,   ,   ,   ,   ,PPF, Y ,DRT;
+   ,DRT,DRT,DRT,DRT,DRT,DRT,DRT,DRT,DRT,DRT;
+   ,DRT,DRT,DRT,DRT,DRT,DRT,DRT,DRT,DRT,DRT;

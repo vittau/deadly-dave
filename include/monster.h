@@ -38,5 +38,7 @@ monster_t* monster_create_swirl(int x, int y);
 monster_t* monster_create_bones(int x, int y);
 monster_t* monster_create_ufo(int x, int y);
 monster_t* monster_create_guard(int x, int y);
+monster_t* monster_create_green_disk(int x, int y);
+monster_t* monster_create_silver_disk(int x, int y);
 
 #endif

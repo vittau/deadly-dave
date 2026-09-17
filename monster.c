@@ -68,14 +68,67 @@ int guard_path[] = {
    -7, -1, -3, -2, -2, -3, -1, -3,      -2, -3, -3, -3, -4, -2, -5, 0
 };
 /*
-int envy_path[] = {
-    7, 1, 7, -1, 8, 2, 6, -2, 7, 2, 7, -2, 8, 2, 7, -2, -7, -1, -8, 3, -7, -2, -7, 2, -6, -2, -8, 2, -7, -2, -7, 0, 
+ * Green disk, monster of level9
+ */
+int green_disk_path[] = {
+    7,  1,  7, -1,  8,  2,  6, -2,       7,  2,  7, -2,  8,  2,  7, -2,
+   -7, -1, -8,  3, -7, -2, -7,  2,      -6, -2, -8,  2, -7, -2, -7,  0
 };
 
-int plate_path[] = {
-    -5, 0, -6, 0, -13, 0, -21, 0, -30, 0, -29, 0, -17, 0, 3, 0, 5, 0, 4, 0, 15, 0, 8, 0, 20, 0, 19, 0, 17, 0, 12, 0, 18, 0
+/*
+ * Silver disk, monster of level10
+ */
+int silver_disk_path[] = {
+   -5,  0, -6,  0,-13,  0,-21,  0,     -30,  0,-29,  0,-17,  0,  3,  0,
+    5,  0,  4,  0, 15,  0,  8,  0,      20,  0, 19,  0, 17,  0, 12,  0,
+   18,  0
 };
-*/
+
+monster_t* monster_create_green_disk(int x, int y) {
+    monster_t *monster = monster_create(x, y, 16, 16);
+
+    memcpy(monster->route, green_disk_path, sizeof(green_disk_path));
+    monster->route_sz = (sizeof(green_disk_path)/sizeof(int));
+    monster->fire_rate = 50;
+
+    monster->tile->sprites[0] = SPRITE_IDX_MONSTER_GREEN_DISK1;
+    monster->tile->sprites[1] = SPRITE_IDX_MONSTER_GREEN_DISK1;
+
+    monster->tile->sprites[2] = SPRITE_IDX_MONSTER_GREEN_DISK2;
+    monster->tile->sprites[3] = SPRITE_IDX_MONSTER_GREEN_DISK2;
+
+    monster->tile->sprites[4] = SPRITE_IDX_MONSTER_GREEN_DISK3;
+    monster->tile->sprites[5] = SPRITE_IDX_MONSTER_GREEN_DISK3;
+
+    monster->tile->sprites[6] = SPRITE_IDX_MONSTER_GREEN_DISK4;
+    monster->tile->sprites[7] = SPRITE_IDX_MONSTER_GREEN_DISK4;
+    monster->tile->sprites[8] = 0;
+
+    return monster;
+}
+
+monster_t* monster_create_silver_disk(int x, int y) {
+    monster_t *monster = monster_create(x, y, 16, 20);
+
+    memcpy(monster->route, silver_disk_path, sizeof(silver_disk_path));
+    monster->route_sz = (sizeof(silver_disk_path)/sizeof(int));
+    monster->fire_rate = 50;
+
+    monster->tile->sprites[0] = SPRITE_IDX_MONSTER_SILVER_DISK1;
+    monster->tile->sprites[1] = SPRITE_IDX_MONSTER_SILVER_DISK1;
+
+    monster->tile->sprites[2] = SPRITE_IDX_MONSTER_SILVER_DISK2;
+    monster->tile->sprites[3] = SPRITE_IDX_MONSTER_SILVER_DISK2;
+
+    monster->tile->sprites[4] = SPRITE_IDX_MONSTER_SILVER_DISK3;
+    monster->tile->sprites[5] = SPRITE_IDX_MONSTER_SILVER_DISK3;
+
+    monster->tile->sprites[6] = SPRITE_IDX_MONSTER_SILVER_DISK4;
+    monster->tile->sprites[7] = SPRITE_IDX_MONSTER_SILVER_DISK4;
+    monster->tile->sprites[8] = 0;
+
+    return monster;
+}
 
 
 monster_t* monster_create_guard(int x, int y) {
