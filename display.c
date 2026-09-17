@@ -1,12 +1,23 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <SDL3/SDL.h>
 
 #include "display.h"
+#include "filter.h"
 
 static SDL_Renderer *g_display_renderer = NULL;
 static SDL_Texture *g_display_texture = NULL;
+/* Width of the texture currently allocated, which is the filtered width. */
+static int g_texture_width = 0;
+/*
+ * The game draws into this offscreen buffer instead of straight into the
+ * texture. display_present() runs the output filter while copying it into the
+ * texture, so a mode change never needs the game to draw differently.
+ */
+static uint32_t *g_frame_pixels = NULL;
+static int g_frame_width = 0;
 /* Safe default so that the game can query the size before the window exists. */
 static display_geometry_t g_geometry = {
     DISPLAY_BASE_WIDTH, DISPLAY_HEIGHT, 1, { 0, 0, DISPLAY_BASE_WIDTH, DISPLAY_HEIGHT }
@@ -117,22 +128,53 @@ display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode
     return geometry;
 }
 
-static int display_build_texture(void) {
+static int display_build_texture(int width) {
+    if (g_display_texture != NULL && g_texture_width == width) {
+        return 0;
+    }
     if (g_display_texture != NULL) {
         SDL_DestroyTexture(g_display_texture);
+        g_display_texture = NULL;
     }
 
     g_display_texture = SDL_CreateTexture(g_display_renderer, SDL_PIXELFORMAT_RGBA8888,
-        SDL_TEXTUREACCESS_STREAMING, g_geometry.width, g_geometry.height);
+        SDL_TEXTUREACCESS_STREAMING, width, DISPLAY_HEIGHT);
 
     if (g_display_texture == NULL) {
         printf("Failed to create the framebuffer texture. Error: (%s) \n", SDL_GetError());
+        g_texture_width = 0;
         return -1;
     }
 
     /* SDL3 filters textures linearly by default, which would blur the pixel art. */
     SDL_SetTextureScaleMode(g_display_texture, SDL_SCALEMODE_NEAREST);
 
+    g_texture_width = width;
+    return 0;
+}
+
+/*
+ * Makes the offscreen buffer the size of the current framebuffer. It is filled
+ * with opaque black so a frame that does not cover every pixel (the intro, a
+ * level shorter than the viewport) cannot show stale data.
+ */
+static int display_build_frame(void) {
+    uint32_t *pixels;
+
+    if (g_frame_pixels != NULL && g_frame_width == g_geometry.width) {
+        return 0;
+    }
+
+    pixels = (uint32_t *)realloc(g_frame_pixels,
+        (size_t)g_geometry.width * DISPLAY_HEIGHT * sizeof(uint32_t));
+    if (pixels == NULL) {
+        printf("Failed to allocate the game framebuffer. Error: (%s) \n", SDL_GetError());
+        return -1;
+    }
+
+    g_frame_pixels = pixels;
+    g_frame_width = g_geometry.width;
+    SDL_memset4(g_frame_pixels, 0x000000FF, (size_t)g_geometry.width * DISPLAY_HEIGHT);
     return 0;
 }
 
@@ -159,7 +201,10 @@ int display_init(SDL_Renderer *renderer, int scale_mode) {
     SDL_GetCurrentRenderOutputSize(g_display_renderer, &out_w, &out_h);
     g_geometry = display_compute_geometry(out_w, out_h, g_scale_mode);
 
-    return display_build_texture();
+    if (display_build_frame() != 0) {
+        return -1;
+    }
+    return display_build_texture(filter_output_width(g_geometry.width));
 }
 
 void display_quit(void) {
@@ -167,6 +212,11 @@ void display_quit(void) {
         SDL_DestroyTexture(g_display_texture);
         g_display_texture = NULL;
     }
+    g_texture_width = 0;
+    free(g_frame_pixels);
+    g_frame_pixels = NULL;
+    g_frame_width = 0;
+    filter_quit();
     g_display_renderer = NULL;
 }
 
@@ -174,6 +224,7 @@ int display_sync(void) {
     display_geometry_t next;
     int out_w = 0;
     int out_h = 0;
+    int resized;
 
     if (g_display_renderer == NULL) {
         return 0;
@@ -181,15 +232,18 @@ int display_sync(void) {
 
     SDL_GetCurrentRenderOutputSize(g_display_renderer, &out_w, &out_h);
     next = display_compute_geometry(out_w, out_h, g_scale_mode);
-
-    if (next.width != g_geometry.width) {
-        g_geometry = next;
-        display_build_texture();
-        return 1;
-    }
+    resized = next.width != g_geometry.width;
 
     g_geometry = next;
-    return 0;
+    display_build_frame();
+    /*
+     * Rebuilt here as well as in display_present(), so a filter mode change
+     * (which changes the filtered width) is picked up even when the window did
+     * not move.
+     */
+    display_build_texture(filter_output_width(g_geometry.width));
+
+    return resized;
 }
 
 /*
@@ -287,27 +341,49 @@ uint64_t display_frame_period_ns(void) {
 }
 
 uint32_t *display_lock(int *pitch_in_pixels) {
-    uint32_t *pixels = NULL;
-    int pitch = 0;
-
-    if (!SDL_LockTexture(g_display_texture, NULL, (void*)&pixels, &pitch)) {
-        printf("Failed to lock the framebuffer texture. Error: (%s) \n", SDL_GetError());
+    if (g_frame_pixels == NULL && display_build_frame() != 0) {
         return NULL;
     }
 
     if (pitch_in_pixels != NULL) {
-        *pitch_in_pixels = pitch / (int)sizeof(uint32_t);
+        *pitch_in_pixels = g_frame_width;
     }
 
-    return pixels;
+    return g_frame_pixels;
 }
 
+/*
+ * Nothing to unlock any more: the game now draws into the offscreen buffer and
+ * display_present() is the one that locks the texture, to filter into it.
+ */
 void display_unlock(void) {
-    SDL_UnlockTexture(g_display_texture);
 }
 
 void display_present(void) {
     SDL_FRect dst;
+    void *texture_pixels = NULL;
+    int texture_pitch = 0;
+    int out_width;
+
+    if (g_display_renderer == NULL || g_frame_pixels == NULL) {
+        return;
+    }
+
+    out_width = filter_output_width(g_geometry.width);
+    if (display_build_texture(out_width) != 0) {
+        return;
+    }
+
+    if (!SDL_LockTexture(g_display_texture, NULL, &texture_pixels, &texture_pitch)) {
+        printf("Failed to lock the framebuffer texture. Error: (%s) \n", SDL_GetError());
+        return;
+    }
+
+    filter_render(g_frame_pixels, g_frame_width, g_geometry.width,
+        (uint32_t *)texture_pixels, texture_pitch / (int)sizeof(uint32_t),
+        DISPLAY_HEIGHT);
+
+    SDL_UnlockTexture(g_display_texture);
 
     /* The geometry is computed in whole pixels, SDL3 draws with floats. */
     dst.x = (float)g_geometry.dst.x;

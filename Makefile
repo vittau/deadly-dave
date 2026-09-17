@@ -5,9 +5,11 @@ UNAME_S := $(shell uname -s)
 H_FILES := include/bullet.h
 H_FILES += include/dave.h
 H_FILES += include/display.h
+H_FILES += include/filter.h
 H_FILES += include/game.h
 H_FILES += include/invfreq.h
 H_FILES += include/monster.h
+H_FILES += include/ntsc.h
 H_FILES += include/plasma.h
 H_FILES += include/soundfx.h
 H_FILES += include/tile.h
@@ -15,6 +17,8 @@ H_FILES += include/tile.h
 C_FILES := main.c
 C_FILES += game.c
 C_FILES += display.c
+C_FILES += filter.c
+C_FILES += ntsc.c
 C_FILES += tile.c
 C_FILES += dave.c
 C_FILES += bullet.c
@@ -28,6 +32,8 @@ C_FILES += soundfx.c
 CFLAGS = -rdynamic -std=c99 -Wall
 CFLAGS += $(shell pkg-config --cflags sdl3)
 LIBS := $(shell pkg-config --libs sdl3)
+# The Blargg filter uses sin/cos/pow/exp; MSVC has them in its CRT.
+LIBS += -lm
 
 all: $(BIN)
 

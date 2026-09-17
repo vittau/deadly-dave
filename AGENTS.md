@@ -30,7 +30,9 @@ except the icons.
 
 - `cd tests && make`. `./tests/test_display` checks `display_compute_geometry`
   (framebuffer width, scaling, centring) and is pure: run it after touching
-  `display.c`, and update its expected widths if the geometry changes.
+  `display.c`, and update its expected widths if the geometry changes. It links
+  `filter.c` and `ntsc.c` as well, because `display.c` does; `tests/Makefile`
+  adds `-lm` for the NTSC filter's `sin`/`cos`/`pow`/`exp`.
 - `test_display` and `test_invfreq` (which writes `out.raw` into `tests/`) run
   headless. `test_monster` opens a window and needs a real display, so CI runs
   none of them.
@@ -42,6 +44,27 @@ except the icons.
   buffer size; every tune has its own value in `soundfx.c` (the jumping sound is
   345). A too large value writes far past the buffer and the process dies with
   SIGBUS, which is what `test_invfreq` used to do.
+
+## CRT filters
+
+`docs/CRT.md` explains the theory and the port in full. In short:
+
+- `ntsc.c` / `include/ntsc.h` is a scalar C99 port of Shay Green's `snes_ntsc`
+  0.2.2 (the same library CannonBall-SE uses), stripped of the SIMD, hi-res and
+  field-merge paths. It takes RGB555 palette indices and writes RGBA8888. The
+  palette table is 32768 entries × 128 words (~16 MB) and is built once by
+  `ntsc_create()`; that is a visible pause, so the game builds it lazily the
+  first time NTSC is enabled and only frees it in `filter_quit()`.
+- `filter.c` / `include/filter.h` owns the `FILTERS` mode
+  (OFF/SCANLINES/NTSC/BOTH), quantises the framebuffer to RGB555, runs the
+  blitter, and applies the scanlines (every odd row, luminance-weighted `>> 1`,
+  alpha preserved, same as CannonBall).
+  NTSC widens the image: `filter_output_width(w)` is `((w-1)/3 + 1) * 7`, so a
+  320 pixel framebuffer becomes 749.
+- Both are `-lm` users (`sin`/`cos`/`pow`/`exp`), hence the extra link line in
+  the Makefile, CMakeLists.txt and tests/Makefile.
+- The pause menu's `FILTERS` row cycles the mode. Like V-SYNC/FPS/MODE it is a
+  runtime setting and is not persisted.
 
 ## Levels and the original game data
 
@@ -122,6 +145,14 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
   banner on them, end up off the screen. `tests/test_display.c` checks both the
   "never past the bottom edge" and the "scene centered while there is room"
   invariants.
+- The game draws into an offscreen `RGBA8888` buffer that `display_lock()`
+  hands out, not straight into the texture. `display_present()` locks the
+  texture itself and runs `filter_render()` while copying, which is what lets
+  the `FILTERS` mode change the texture width mid-run. `display_unlock()` is a
+  no-op; do not move drawing back onto the texture or the filter loses its
+  source. The filter is a frame operation, applied once per presented frame,
+  so it goes on the `display_present()` side of the two clocks, never inside
+  the state machine.
 - Monsters, plasma and the bullet are drawn blended: `render_tile_idx` XORs
   their colours over what is behind them. The XOR must keep the sprite's alpha
   byte, or it produces alpha 0 pixels that render black and eat the level

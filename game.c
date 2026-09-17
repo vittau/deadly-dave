@@ -23,6 +23,7 @@
 
 #include "game.h"
 #include "display.h"
+#include "filter.h"
 #include "soundfx.h"
 
 
@@ -47,6 +48,11 @@ static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
     "30", "60", "120", "REFRESH", "UNLIMITED"
 };
 static int g_fps_limit_index = FPS_LIMIT_REFRESH_INDEX;
+
+/* Pause menu FILTERS row: matches filter.h's FILTER_OFF..FILTER_BOTH order. */
+static const char *g_filter_labels[FILTER_MODE_COUNT] = {
+    "OFF", "SCANLINES", "NTSC", "BOTH"
+};
 
 /* Defined further down, alongside the other keyboard shortcut handling. */
 static void toggle_fullscreen(void);
@@ -426,12 +432,13 @@ static void draw_score(int score) {
     }
 }
 
-#define PAUSE_OPTION_VSYNC 0
-#define PAUSE_OPTION_FPS   1
-#define PAUSE_OPTION_MODE  2
-#define PAUSE_OPTION_WARP  3
-#define PAUSE_OPTION_QUIT  4
-#define PAUSE_OPTION_COUNT 5
+#define PAUSE_OPTION_VSYNC   0
+#define PAUSE_OPTION_FPS     1
+#define PAUSE_OPTION_MODE    2
+#define PAUSE_OPTION_FILTERS 3
+#define PAUSE_OPTION_WARP    4
+#define PAUSE_OPTION_QUIT    5
+#define PAUSE_OPTION_COUNT   6
 
 /* Levels on disk, res/levels/level1.ddt through level10.ddt; WARP cycles through them. */
 #define TOTAL_LEVELS 10
@@ -447,6 +454,9 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
     case PAUSE_OPTION_MODE:
         snprintf(out, out_size, "MODE: %s",
             ((SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0) ? "FULLSCREEN" : "WINDOWED");
+        break;
+    case PAUSE_OPTION_FILTERS:
+        snprintf(out, out_size, "FILTERS: %s", g_filter_labels[filter_mode()]);
         break;
     case PAUSE_OPTION_WARP:
         snprintf(out, out_size, "WARP: %lu%s", (unsigned long)game->level,
@@ -474,6 +484,9 @@ static void pause_menu_apply_option(game_context_t *game, tile_t *map, int optio
         break;
     case PAUSE_OPTION_MODE:
         toggle_fullscreen();
+        break;
+    case PAUSE_OPTION_FILTERS:
+        filter_set_mode((filter_mode() + 1) % FILTER_MODE_COUNT);
         break;
     case PAUSE_OPTION_WARP:
         /*

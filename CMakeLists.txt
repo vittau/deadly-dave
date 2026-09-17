@@ -47,8 +47,8 @@ if (WIN32)
   set(DEADLY_DAVE_RC "${deadly-dave_BINARY_DIR}/deadly-dave.rc")
 endif()
 
-set(DEADLY_DAVE_SOURCES "main.c" "game.c" "display.c" "invfreq.c" "monster.c"
-    "plasma.c" "tile.c" "dave.c" "soundfx.c" "bullet.c")
+set(DEADLY_DAVE_SOURCES "main.c" "game.c" "display.c" "filter.c" "ntsc.c"
+    "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c" "bullet.c")
 if (WIN32)
   list(APPEND DEADLY_DAVE_SOURCES "${DEADLY_DAVE_RC}")
 endif()
@@ -56,4 +56,9 @@ endif()
 add_executable (deadly-dave ${DEADLY_DAVE_SOURCES})
 
 target_link_libraries(deadly-dave PUBLIC SDL3::SDL3-static)
+# The Blargg NTSC filter uses sin/cos/pow/exp; MSVC has them in its CRT without
+# an extra library.
+if (NOT WIN32)
+  target_link_libraries(deadly-dave PUBLIC m)
+endif()
 #set_property(TARGET deadly-dave)
