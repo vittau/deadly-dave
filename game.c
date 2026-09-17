@@ -702,52 +702,52 @@ static int start_intro(void) {
     tile_t block[41];
 
     tile_create_intro_banner(&block[0], 103, 0);
-    tile_create_block(&block[1], SPRITE_IDX_DIRT, 88, 64, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[2], SPRITE_IDX_DIRT, 120, 64, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[3], SPRITE_IDX_DIRT, 136, 64, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[4], SPRITE_IDX_DIRT, 152, 64, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[5], SPRITE_IDX_DIRT, 168, 64, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[6], SPRITE_IDX_DIRT, 200, 64, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[7], SPRITE_IDX_DIRT, 232, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[1], SPRITE_IDX_DIRT, 80, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[2], SPRITE_IDX_DIRT, 112, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[3], SPRITE_IDX_DIRT, 128, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[4], SPRITE_IDX_DIRT, 144, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[5], SPRITE_IDX_DIRT, 160, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[6], SPRITE_IDX_DIRT, 192, 64, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[7], SPRITE_IDX_DIRT, 224, 64, TILE_SIZE, TILE_SIZE);
 
-    tile_create_block(&block[8], SPRITE_IDX_DIRT, 88, 80, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[9], SPRITE_IDX_DIRT, 120, 80, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[10], SPRITE_IDX_CROWN, 136, 80, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[11], SPRITE_IDX_DIRT, 232, 80, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[8], SPRITE_IDX_DIRT, 80, 80, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[9], SPRITE_IDX_DIRT, 112, 80, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[10], SPRITE_IDX_CROWN, 128, 80, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[11], SPRITE_IDX_DIRT, 224, 80, TILE_SIZE, TILE_SIZE);
 
-    tile_create_block(&block[12], SPRITE_IDX_DIRT, 88, 96, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[13], SPRITE_IDX_DIRT, 120, 96, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[14], SPRITE_IDX_DIRT, 168, 96, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[15], SPRITE_IDX_DIRT, 184, 96, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[16], SPRITE_IDX_DIRT, 200, 96, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[17], SPRITE_IDX_DIRT, 232, 96, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[12], SPRITE_IDX_DIRT, 80, 96, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[13], SPRITE_IDX_DIRT, 112, 96, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[14], SPRITE_IDX_DIRT, 160, 96, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[15], SPRITE_IDX_DIRT, 176, 96, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[16], SPRITE_IDX_DIRT, 192, 96, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[17], SPRITE_IDX_DIRT, 224, 96, TILE_SIZE, TILE_SIZE);
 
-    tile_create_block(&block[18], SPRITE_IDX_DIRT, 88, 112, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[19], SPRITE_IDX_DIRT, 120, 112, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[20], SPRITE_IDX_CROWN, 216, 112, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[21], SPRITE_IDX_DIRT, 232, 112, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[18], SPRITE_IDX_DIRT, 80, 112, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[19], SPRITE_IDX_DIRT, 112, 112, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[20], SPRITE_IDX_CROWN, 208, 112, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[21], SPRITE_IDX_DIRT, 224, 112, TILE_SIZE, TILE_SIZE);
 
-    tile_create_block(&block[22], SPRITE_IDX_DIRT, 88, 128, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[23], SPRITE_IDX_DIRT, 120, 128, TILE_SIZE, TILE_SIZE);
-    tile_create_intro_fire(&block[24], 136, 128);
-    tile_create_block(&block[25], SPRITE_IDX_DIRT, 152, 128, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[26], SPRITE_IDX_DIRT, 168, 128, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[27], SPRITE_IDX_DIRT, 184, 128, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[28], SPRITE_IDX_DIRT, 232, 128, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[22], SPRITE_IDX_DIRT, 80, 128, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[23], SPRITE_IDX_DIRT, 112, 128, TILE_SIZE, TILE_SIZE);
+    tile_create_intro_fire(&block[24], 128, 128);
+    tile_create_block(&block[25], SPRITE_IDX_DIRT, 144, 128, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[26], SPRITE_IDX_DIRT, 160, 128, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[27], SPRITE_IDX_DIRT, 176, 128, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[28], SPRITE_IDX_DIRT, 224, 128, TILE_SIZE, TILE_SIZE);
 
-    tile_create_block(&block[29], SPRITE_IDX_DIRT, 88, 144, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[30], SPRITE_IDX_DIRT, 232, 144, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[29], SPRITE_IDX_DIRT, 80, 144, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[30], SPRITE_IDX_DIRT, 224, 144, TILE_SIZE, TILE_SIZE);
 
-    tile_create_block(&block[31], SPRITE_IDX_DIRT, 88, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[32], SPRITE_IDX_DIRT, 104, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[33], SPRITE_IDX_DIRT, 120, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[34], SPRITE_IDX_DIRT, 136, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[35], SPRITE_IDX_DIRT, 152, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[36], SPRITE_IDX_DIRT, 168, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[37], SPRITE_IDX_DIRT, 184, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_block(&block[38], SPRITE_IDX_DIRT, 200, 160, TILE_SIZE, TILE_SIZE);
-    tile_create_intro_fire(&block[39], 216, 160);
-    tile_create_block(&block[40], SPRITE_IDX_DIRT, 232, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[31], SPRITE_IDX_DIRT, 80, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[32], SPRITE_IDX_DIRT, 96, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[33], SPRITE_IDX_DIRT, 112, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[34], SPRITE_IDX_DIRT, 128, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[35], SPRITE_IDX_DIRT, 144, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[36], SPRITE_IDX_DIRT, 160, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[37], SPRITE_IDX_DIRT, 176, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_block(&block[38], SPRITE_IDX_DIRT, 192, 160, TILE_SIZE, TILE_SIZE);
+    tile_create_intro_fire(&block[39], 208, 160);
+    tile_create_block(&block[40], SPRITE_IDX_DIRT, 224, 160, TILE_SIZE, TILE_SIZE);
 
     while (!intro_should_finish) {
         timer_begin = SDL_GetTicks();
@@ -785,6 +785,7 @@ static int start_intro(void) {
 
         draw_text_line("BY JOHN ROMERO", 110 + offset, 50);
         draw_text_line("(C) 1990 SOFTDISK, INC.", 79 + offset, 57);
+        draw_text_line("MODERNIZED BY VITOR MACHADO", 52 + offset, 184);
 
         display_unlock();
         display_present();
