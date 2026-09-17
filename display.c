@@ -202,6 +202,15 @@ void display_toggle_scale_mode(void) {
         DISPLAY_SCALE_FIT : DISPLAY_SCALE_PIXEL_PERFECT;
 }
 
+void display_set_vsync(int enabled) {
+    if (g_display_renderer == NULL) {
+        return;
+    }
+    if (!SDL_SetRenderVSync(g_display_renderer, enabled ? 1 : 0)) {
+        printf("Could not change vsync. Error: (%s) \n", SDL_GetError());
+    }
+}
+
 int display_width(void) {
     return g_geometry.width;
 }

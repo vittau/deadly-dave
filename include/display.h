@@ -70,6 +70,8 @@ void display_quit(void);
  */
 int  display_sync(void);
 void display_toggle_scale_mode(void);
+/* Turns vertical sync on the renderer on or off, for the pause menu's V-SYNC option. */
+void display_set_vsync(int enabled);
 
 int  display_width(void);
 /* Tile columns touched by the viewport, including a partially visible one. */

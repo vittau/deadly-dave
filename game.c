@@ -34,6 +34,25 @@ assets_t *g_assets;
 soundfx_t *g_soundfx;
 SDL_Gamepad *g_gamepad;
 
+/*
+ * Pause menu settings. Not persisted: every run starts back on the same
+ * defaults the game always ran with - vsync on and the frame paced to the
+ * display's own refresh rate.
+ */
+static int g_vsync_enabled = 1;
+#define FPS_LIMIT_REFRESH_INDEX   3
+#define FPS_LIMIT_UNLIMITED_INDEX 4
+#define FPS_LIMIT_COUNT           5
+static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
+    "30", "60", "120", "REFRESH", "UNLIMITED"
+};
+static int g_fps_limit_index = FPS_LIMIT_REFRESH_INDEX;
+
+/* Defined further down, alongside the other keyboard shortcut handling. */
+static void toggle_fullscreen(void);
+/* Defined further down, alongside the rest of the level HUD drawing. */
+static void draw_level_frame(game_context_t *game);
+
 /* Sprites that are XORed over what is behind them instead of painted on top. */
 static const int blended_sprites[] = {
     SPRITE_IDX_BULLET_RIGHT, SPRITE_IDX_BULLET_LEFT,
@@ -384,14 +403,152 @@ static void draw_score(int score) {
     }
 }
 
-static void draw_quit_popup(tile_t *flashing_cursor) {
-    int offset = display_center_offset();
+#define PAUSE_OPTION_VSYNC 0
+#define PAUSE_OPTION_FPS   1
+#define PAUSE_OPTION_MODE  2
+#define PAUSE_OPTION_QUIT  3
+#define PAUSE_OPTION_COUNT 4
 
-    draw_popup_box(88 + offset, 80, 5, 21);
-    draw_text_line_black("QUIT? (Y OR N):", 104 + offset, 98);
-    flashing_cursor->x = 224 + offset;
-    draw_tile(flashing_cursor);
-    flashing_cursor->tick(flashing_cursor);
+static void pause_menu_option_text(int option, char *out, size_t out_size) {
+    switch (option) {
+    case PAUSE_OPTION_VSYNC:
+        snprintf(out, out_size, "V-SYNC: %s", g_vsync_enabled ? "ON" : "OFF");
+        break;
+    case PAUSE_OPTION_FPS:
+        snprintf(out, out_size, "FPS LIMIT: %s", g_fps_limit_labels[g_fps_limit_index]);
+        break;
+    case PAUSE_OPTION_MODE:
+        snprintf(out, out_size, "MODE: %s",
+            ((SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0) ? "FULLSCREEN" : "WINDOWED");
+        break;
+    default:
+        snprintf(out, out_size, "QUIT");
+        break;
+    }
+}
+
+/* Applies the currently selected row; QUIT is handled by the caller instead. */
+static void pause_menu_apply_option(int option) {
+    switch (option) {
+    case PAUSE_OPTION_VSYNC:
+        g_vsync_enabled = !g_vsync_enabled;
+        display_set_vsync(g_vsync_enabled);
+        break;
+    case PAUSE_OPTION_FPS:
+        g_fps_limit_index = (g_fps_limit_index + 1) % FPS_LIMIT_COUNT;
+        break;
+    case PAUSE_OPTION_MODE:
+        toggle_fullscreen();
+        break;
+    default:
+        break;
+    }
+}
+
+static void draw_pause_menu(game_context_t *game) {
+    int offset = display_center_offset();
+    const int columns = 24;
+    const int rows = 9;
+    int box_x = offset + ((DISPLAY_BASE_WIDTH - (columns * 8)) / 2);
+    int box_y = 56;
+    char line[32];
+
+    draw_popup_box(box_x, box_y, rows, columns);
+    draw_text_line_black("PAUSE", box_x + (((columns * 8) - (5 * 8)) / 2), box_y + 8);
+
+    for (int i = 0; i < PAUSE_OPTION_COUNT; i++) {
+        pause_menu_option_text(i, line, sizeof(line));
+        draw_text_line_black(line, box_x + 16, box_y + 24 + (i * 10));
+    }
+
+    game->flashing_cursor.x = box_x + 8;
+    game->flashing_cursor.y = box_y + 24 + (game->pause_selected * 10);
+    draw_tile(&game->flashing_cursor);
+    game->flashing_cursor.tick(&game->flashing_cursor);
+}
+
+/* Called by whoever opens the pause menu, to start it on a clean cursor and input state. */
+static void pause_menu_open(game_context_t *game) {
+    game->pause_selected = 0;
+    game->pause_prev_up = 0;
+    game->pause_prev_down = 0;
+    game->pause_prev_confirm = 0;
+}
+
+/*
+ * One press-release-press cycle per Escape tap, no matter which state reads
+ * it: game_level(), game_level_blinking(), game_warp() and the pause menu
+ * itself all call this instead of checking keys->escape directly. Without it,
+ * the very key-down that opens the menu is still 1 on the next logic step,
+ * and the menu (if it read the raw flag) would see that as the press that
+ * closes it again - open and close would fight over one physical press.
+ */
+static int consume_escape_edge(game_context_t *game, keys_state_t *keys) {
+    int edge = keys->escape && !game->prev_escape;
+    game->prev_escape = keys->escape;
+    return edge;
+}
+
+/*
+ * Drives the pause menu one step: navigates, applies the selected row and
+ * closes it, on the same button layout wherever it is opened from. is_warp
+ * says which frozen scene to redraw behind the box, since it is redrawn in
+ * full every call rather than assumed to still be sitting in the framebuffer
+ * from before the menu opened.
+ */
+static int game_pause_menu(game_context_t *game, tile_t *map, keys_state_t *keys, int stay_state,
+        int resume_state, int is_warp) {
+    int up_edge;
+    int down_edge;
+    int confirm_level;
+    int confirm_edge;
+
+    if (keys->quit) {
+        return G_STATE_QUIT_NOW;
+    }
+
+    if (consume_escape_edge(game, keys) || keys->key_n) {
+        g_soundfx->resume(g_soundfx);
+        return resume_state;
+    }
+
+    up_edge = keys->climb_up && !game->pause_prev_up;
+    down_edge = keys->down && !game->pause_prev_down;
+    game->pause_prev_up = keys->climb_up;
+    game->pause_prev_down = keys->down;
+
+    if (up_edge) {
+        game->pause_selected = (game->pause_selected + PAUSE_OPTION_COUNT - 1) % PAUSE_OPTION_COUNT;
+    } else if (down_edge) {
+        game->pause_selected = (game->pause_selected + 1) % PAUSE_OPTION_COUNT;
+    }
+
+    confirm_level = keys->enter || keys->space;
+    confirm_edge = confirm_level && !game->pause_prev_confirm;
+    game->pause_prev_confirm = confirm_level;
+
+    if (confirm_edge) {
+        if (game->pause_selected == PAUSE_OPTION_QUIT) {
+            return G_STATE_QUIT_NOW;
+        }
+        pause_menu_apply_option(game->pause_selected);
+    }
+
+    /*
+     * Redrawn in full every call, exactly like every other state: the
+     * streaming texture behind g_pixels is not guaranteed to keep what was
+     * last drawn into it between locks, so drawing only the box on top of an
+     * assumed-frozen frame could show whatever an old, different frame left
+     * in that particular buffer.
+     */
+    clear_screen();
+    draw_scrollable_area(game, map);
+    draw_level_frame(game);
+    if (is_warp) {
+        clear_screen_sides();
+    }
+    draw_pause_menu(game);
+    return stay_state;
 }
 
 static void unload_assets(assets_t *assets) {
@@ -640,11 +797,12 @@ static void gamepad_event(SDL_Event *event, keys_state_t *state) {
 
     } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
         if (event->gbutton.button == SDL_GAMEPAD_BUTTON_SOUTH) {
-            /* Answers the quit popup with yes. */
+            /* The pause menu's A/confirm. */
             state->key_y = 1;
+            state->enter = 1;
         } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_EAST) {
             state->jetpack = 1;
-            /* Answers the quit popup with no. */
+            /* The pause menu's B/close. */
             state->key_n = 1;
         } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_START) {
             /*
@@ -678,9 +836,15 @@ static void get_keys(keys_state_t* state) {
     state->space      = (keystate[SDL_SCANCODE_SPACE] != 0) ? 1 : 0;
     state->key_y      = (keystate[SDL_SCANCODE_Y] != 0) ? 1 : 0;
     state->key_n      = (keystate[SDL_SCANCODE_N] != 0) ? 1 : 0;
+    /*
+     * Up without jumping, see keys_state_t: the pause menu points its cursor
+     * with it too, so Up/W move it there without also being read as jump.
+     */
+    state->climb_up   = (keystate[SDL_SCANCODE_UP] != 0 || keystate[SDL_SCANCODE_W] != 0) ? 1 : 0;
 
     state->jetpack = 0;
-    state->climb_up = 0;
+    /* Enter is otherwise only ever raised by the KEY_DOWN case below or a gamepad event. */
+    state->enter = 0;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_KEY_DOWN) {
             int is_repeat = event.key.repeat;
@@ -770,10 +934,25 @@ typedef struct frame_pacer_struct {
     int64_t  accumulator;   /* nanoseconds owed to the logic clock             */
 } frame_pacer_t;
 
-/* One refresh of the screen the window is on, less the margin above. */
+/*
+ * The FPS LIMIT pause menu option overrides the budget with a fixed period,
+ * except REFRESH (its default) and UNLIMITED, which keep pacing off the
+ * display: REFRESH is one refresh of the screen the window is on, less the
+ * margin above, and UNLIMITED is no budget at all - the loop never sleeps and
+ * only vsync, if it's on, still paces the frames.
+ */
 static uint64_t pacer_budget_ns(void) {
-    uint64_t period = display_frame_period_ns();
-    return period - FRAME_BUDGET_MARGIN(period);
+    uint64_t period;
+
+    switch (g_fps_limit_index) {
+    case 0: return (uint64_t)SDL_NS_PER_SECOND / 30;
+    case 1: return (uint64_t)SDL_NS_PER_SECOND / 60;
+    case 2: return (uint64_t)SDL_NS_PER_SECOND / 120;
+    case FPS_LIMIT_UNLIMITED_INDEX: return 0;
+    default:
+        period = display_frame_period_ns();
+        return period - FRAME_BUDGET_MARGIN(period);
+    }
 }
 
 static void pacer_init(frame_pacer_t *pacer) {
@@ -942,16 +1121,16 @@ static int start_intro(void) {
             get_keys(&key_state);
 
             /*
-             * Enter, space or any of the pad's face buttons starts the game. The
-             * pad's Start raises escape as well, so this comes first and wins: on
-             * the title screen Start means "go", not "quit".
+             * Enter, space, Escape or any of the pad's face buttons starts the
+             * game - Escape and Start (which raises escape too) are not "quit"
+             * here, only closing the window is.
              */
             if (key_state.enter || key_state.space || key_state.jump ||
-                    key_state.fire || key_state.jetpack) {
+                    key_state.fire || key_state.jetpack || key_state.escape) {
                 intro_should_finish = 1;
 
-            /* Quit, or the window was closed: leave so the game can shut down. */
-            } else if (key_state.escape || key_state.quit) {
+            /* The window was closed: leave so the game can shut down. */
+            } else if (key_state.quit) {
                 display_unlock();
                 return 0;
             }
@@ -1004,31 +1183,11 @@ static void clear_map(tile_t *map) {
 }
 
 static int game_warp_popup(game_context_t *game, tile_t *map, keys_state_t *keys) {
-    if (keys->quit || keys->key_y) {
-        return G_STATE_QUIT_NOW;
-    }
-
-    if (keys->key_n) {
-        g_soundfx->resume(g_soundfx);
-        return G_STATE_WARP;
-    }
-
-    draw_quit_popup(&game->flashing_cursor);
-    return G_STATE_WARP_POPUP;
+    return game_pause_menu(game, map, keys, G_STATE_WARP_POPUP, G_STATE_WARP, 1);
 }
 
 static int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *keys) {
-    if (keys->quit || keys->key_y) {
-        return G_STATE_QUIT_NOW;
-    }
-
-    if (keys->key_n) {
-        g_soundfx->resume(g_soundfx);
-        return G_STATE_LEVEL;
-    }
-
-    draw_quit_popup(&game->flashing_cursor);
-    return G_STATE_LEVEL_POPUP;
+    return game_pause_menu(game, map, keys, G_STATE_LEVEL_POPUP, G_STATE_LEVEL, 0);
 }
 
 /*
@@ -1239,8 +1398,9 @@ static int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *
         return G_STATE_QUIT_NOW;
     }
 
-    if (keys->escape) {
+    if (consume_escape_edge(game, keys)) {
         g_soundfx->stop(g_soundfx);
+        pause_menu_open(game);
         return G_STATE_LEVEL_POPUP;
     }
 
@@ -1279,8 +1439,9 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
         return G_STATE_QUIT_NOW;
     }
 
-    if (keys->escape) {
+    if (consume_escape_edge(game, keys)) {
         g_soundfx->stop(g_soundfx);
+        pause_menu_open(game);
         return G_STATE_LEVEL_POPUP;
     }
 
@@ -1451,7 +1612,8 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         return G_STATE_QUIT_NOW;
     }
 
-    if (keys->escape) {
+    if (consume_escape_edge(game, keys)) {
+        pause_menu_open(game);
         return G_STATE_WARP_POPUP;
     }
 
@@ -1747,8 +1909,8 @@ static int gameloop(int starting_level) {
 
             /*
              * One get_keys() per logic step, as before. The one shot flags
-             * (jetpack, key_y, key_n) are rebuilt by every call - jetpack and
-             * climb_up are zeroed, key_y/key_n reassigned from the keyboard -
+             * (jetpack, enter, key_y, key_n) are rebuilt by every call - jetpack
+             * and enter are zeroed, key_y/key_n reassigned from the keyboard -
              * and the presses behind them come out of the event queue, which
              * only hands each event to the single step that polled it. A J or a
              * pad B pressed once therefore toggles the jetpack once, however

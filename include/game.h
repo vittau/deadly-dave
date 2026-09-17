@@ -33,7 +33,10 @@
 
 typedef struct keys_state_struct {
     int32_t jump;
-    /* Up without jumping: only climbs and flies, used by the controller's up. */
+    /*
+     * Up without jumping: only climbs and flies, used by the controller's up
+     * and, on the keyboard, by Up/W - also the pause menu's cursor-up.
+     */
     int32_t climb_up;
     int32_t left;
     int32_t right;
@@ -79,6 +82,19 @@ typedef struct game_context_struct {
     uint64_t score;
 
     int32_t in_warp;
+
+    /* Escape is read as one edge per physical press everywhere it's checked
+     * (see consume_escape_edge in game.c), so opening and closing the pause
+     * menu never fight over the same held key. */
+    int32_t prev_escape;
+
+    /* Pause menu: which row the cursor sits on, and last frame's raw input,
+     * so a button held across the frame that opened the menu isn't read
+     * again as a fresh press by the menu itself. */
+    int32_t pause_selected;
+    int32_t pause_prev_up;
+    int32_t pause_prev_down;
+    int32_t pause_prev_confirm;
 } game_context_t;
 
 
