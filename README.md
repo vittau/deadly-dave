@@ -74,5 +74,7 @@ the three packages and publishes them.
 
 ## Acknowledgments
 
-* MaiZure    - for starting the 'lmdave' project this is based on.
-* Malvineous - for allowing the unpacking of original resources from dave.exe.
+* skoperst    - for [deadly-dave](https://github.com/skoperst/deadly-dave), the
+                port this one is forked from.
+* MaiZure     - for starting the 'lmdave' project this is based on.
+* Malvineous  - for allowing the unpacking of original resources from dave.exe.
