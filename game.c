@@ -3,15 +3,12 @@
 #include <stdint.h>
 #include <string.h>
 
-/* access() and chdir() are POSIX; MSVC has them in io.h/direct.h, underscored. */
+/* chdir() is POSIX; MSVC has it in direct.h, underscored. */
 #if defined(_WIN32)
 #include <direct.h>
-#include <io.h>
-#define dd_access _access
 #define dd_chdir _chdir
 #else
 #include <unistd.h>
-#define dd_access access
 #define dd_chdir chdir
 #endif
 
@@ -261,19 +258,11 @@ static void draw_char(char c, int x, int y, int is_black) {
     }
 }
 
-static void draw_text_line(const char *line, int x, int y) {
+static void draw_text_line(const char *line, int x, int y, int is_black) {
     size_t length = strlen(line);
 
     for (size_t i = 0; i < length; i++) {
-        draw_char(line[i], x + (i * 8), y, 0);
-    }
-}
-
-static void draw_text_line_black(const char *line, int x, int y) {
-    size_t length = strlen(line);
-
-    for (size_t i = 0; i < length; i++) {
-        draw_char(line[i], x + (i * 8), y, 1);
+        draw_char(line[i], x + (i * 8), y, is_black);
     }
 }
 
@@ -284,7 +273,7 @@ static void draw_text_line_black(const char *line, int x, int y) {
 static void draw_text_line_centered(const char *line, int y) {
     int width = (int)strlen(line) * 8;
 
-    draw_text_line(line, (display_width() - width) / 2, y);
+    draw_text_line(line, (display_width() - width) / 2, y, 0);
 }
 
 static void draw_popup_box(int x, int y, int rows, int columns) {
@@ -404,7 +393,7 @@ static void draw_intermission_text(int levels_to_go) {
     } else {
         snprintf(text, sizeof(text), "GOOD WORK! ONLY %d MORE TO GO!", levels_to_go);
     }
-    draw_text_line(text, 50 + display_center_offset(), 58);
+    draw_text_line(text, 50 + display_center_offset(), 58, 0);
 }
 
 static void draw_jetpack(int bars) {
@@ -536,13 +525,13 @@ static void draw_pause_menu(game_context_t *game) {
     char line[32];
 
     draw_popup_box(box_x, box_y, rows, columns);
-    draw_text_line_black("PAUSE", box_x + (((columns * 8) - (5 * 8)) / 2), box_y + 8);
+    draw_text_line("PAUSE", box_x + (((columns * 8) - (5 * 8)) / 2), box_y + 8, 1);
 
     for (int i = 0; i < PAUSE_OPTION_COUNT; i++) {
         pause_menu_option_text(game, i, line, sizeof(line));
         /* +18, not +16: the cursor's biggest frame fills its 8x8 tile, so it
          * would otherwise touch the text (the tile ends at box_x + 16). */
-        draw_text_line_black(line, box_x + 18, box_y + 24 + (i * 10));
+        draw_text_line(line, box_x + 18, box_y + 24 + (i * 10), 1);
     }
 
     game->flashing_cursor.x = box_x + 8;
@@ -730,25 +719,24 @@ static int load_assets(void) {
     g_assets = calloc(1, sizeof(struct game_assets));
 
     for (int i = 0; i < 1000; i++) {
-        g_assets->imgdata[i] = NULL;
-        memset(fname, '\0', sizeof(fname));
+        SDL_Surface *surface;
+
         snprintf(fname, sizeof(fname), "res/tiles/tile%u.bmp", i);
-        if (dd_access(fname, 0) == 0) {
-            SDL_Surface *surface = SDL_LoadBMP(fname);
-            if (surface != NULL) {
-                g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
-                /*
-                 * Monsters, plasma and the bullet ship as 24 bit BMPs with no
-                 * alpha channel, so their black background would be drawn
-                 * opaque on top of the level. Only those are keyed out, the
-                 * level tiles and the HUD bars are meant to be opaque.
-                 */
-                if (!SDL_ISPIXELFORMAT_ALPHA(surface->format) &&
-                        i >= SPRITE_IDX_MONSTER_SPIDER1 && i <= SPRITE_IDX_BULLET_LEFT) {
-                    key_out_black_background(g_assets->imgdata[i]);
-                }
-                SDL_DestroySurface(surface);
+        /* A missing file loads as NULL, so no separate existence check is needed. */
+        surface = SDL_LoadBMP(fname);
+        if (surface != NULL) {
+            g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
+            /*
+             * Monsters, plasma and the bullet ship as 24 bit BMPs with no
+             * alpha channel, so their black background would be drawn
+             * opaque on top of the level. Only those are keyed out, the
+             * level tiles and the HUD bars are meant to be opaque.
+             */
+            if (!SDL_ISPIXELFORMAT_ALPHA(surface->format) &&
+                    i >= SPRITE_IDX_MONSTER_SPIDER1 && i <= SPRITE_IDX_BULLET_LEFT) {
+                key_out_black_background(g_assets->imgdata[i]);
             }
+            SDL_DestroySurface(surface);
             loaded++;
         }
     }
