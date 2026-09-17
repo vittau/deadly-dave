@@ -55,9 +55,9 @@
    ,RBK,   ,   ,   ,RBK,JPK,RBK,   ,   ,RBK;
    ,RBK,   ,   ,   ,RBK,RBK,RBK,   ,   ,RBK;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,RBK;
-   ,RBK,   ,   ,TR4,TR2,TR5,   ,   ,   ,RBK;
+   ,RBK,   ,   ,TR4,TR2,TR6,   ,   ,   ,RBK;
    ,RBK,   ,   ,TR2,TR2,TR2,TRK,TRK,TRK,RBK;
-   ,RBK,   ,   ,TR3,TR2,TR6,   ,   ,   ,WT1;
+   ,RBK,   ,   ,TR3,TR2,TR5,   ,   ,   ,WT1;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,WT2;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,WT3;
    ,RBK,   ,   ,   , V ,   ,   ,   ,   ,WT4;
