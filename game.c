@@ -72,9 +72,12 @@ static const int blended_sprites[] = {
 static uint8_t g_blended[1000];
 
 /*
- * Paints the parts of the framebuffer outside the centered 320 pixel wide
- * picture black. The warp corridor is such a picture, and its level data
- * continues past the right edge of it, so the rest has to be hidden.
+ * Paints the parts of the scene outside the centered 320 pixel wide picture
+ * black. The warp corridor is such a picture, and its level data continues
+ * past the right edge of it, so the rest has to be hidden. Only the scene
+ * band is touched, between the two HUD bars: those are drawn the full width
+ * of the window by draw_level_frame() and must stay that way, not be cut down
+ * to the 320 pixel picture along with the corridor.
  */
 static void clear_screen_sides(void) {
     int screen_width = display_width();
@@ -84,7 +87,7 @@ static void clear_screen_sides(void) {
         return;
     }
 
-    for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
+    for (int line_idx = DISPLAY_SCENE_TOP; line_idx < DISPLAY_SCENE_BOTTOM; line_idx++) {
         uint32_t *row = g_pixels + line_idx * g_pixels_pitch;
 
         SDL_memset4(row, 0x000000FF, (size_t)left);
