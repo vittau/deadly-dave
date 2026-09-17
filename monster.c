@@ -246,7 +246,6 @@ static void monster_state_active_routine(monster_t *monster, int dave_x) {
         monster->tile->y += monster->route[monster->route_idx+1];
         monster->route_idx += 2;
         if (monster->route_idx >= monster->route_sz) {
-            printf("ROUTE RESET ticks_in_state: %d \n", monster->ticks_in_state);
             monster->route_idx = 0;
         }
         monster->tile->sprite_idx++;

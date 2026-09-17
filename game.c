@@ -92,7 +92,7 @@ void render_tile_idx(int tile_idx, int x, int y) {
     }
 }
 
-void clear_screen() {
+void clear_screen(void) {
     int screen_width = display_width();
 
     for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
@@ -431,7 +431,7 @@ static void key_out_black_background(SDL_Surface *surface) {
     free(stack);
 }
 
-int load_assets() {
+int load_assets(void) {
     char fname[64];
     int loaded = 0;
     g_assets = malloc(sizeof(struct game_assets));
@@ -625,14 +625,8 @@ void get_keys(keys_state_t* state) {
     state->jetpack = 0;
     state->climb_up = 0;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_USER) {
-            printf("user event \n");
-
-        } else if (event.type == SDL_EVENT_KEY_DOWN) {
+        if (event.type == SDL_EVENT_KEY_DOWN) {
             int is_repeat = event.key.repeat;
-            //int modifier = event.key.mod;
-            //int scancode = event.key.scancode;
-            //printf("mod: %d, scan: %d, repeat: %d \n", modifier, scancode, is_repeat);
             /* Edge triggered: the jetpack is a toggle, holding the key is not meant to flip it. */
             if (event.key.scancode == SDL_SCANCODE_J && is_repeat == 0) {
                 state->jetpack = 1;
@@ -646,14 +640,6 @@ void get_keys(keys_state_t* state) {
             }
             if (event.key.scancode == SDL_SCANCODE_F5 && is_repeat == 0) {
                 display_toggle_scale_mode();
-            }
-            if (event.key.scancode == SDL_SCANCODE_RIGHTBRACKET && is_repeat == 0) {
-                printf("BR \n");
-                state->bracer = 1;
-            }
-            if (event.key.scancode == SDL_SCANCODE_LEFTBRACKET && is_repeat == 0) {
-                printf("BL \n");
-                state->bracel = 1;
             }
         } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
@@ -681,7 +667,7 @@ int is_any_key_pressed(keys_state_t* key_state) {
  * Shows the intro until the player starts the game. Returns 0 when the player
  * quit or closed the window, so the caller can shut the game down.
  */
-int start_intro() {
+int start_intro(void) {
     int32_t intro_should_finish = 0;
     uint64_t timer_begin;
     uint64_t timer_end;

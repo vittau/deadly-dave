@@ -10,29 +10,12 @@
 #define TILE_SIZE 16
 #define TILEMAP_WIDTH 100
 #define TILEMAP_HEIGHT 12
-#define TILEMAP_SCENE_X 0
-#define TILEMAP_SCENE_Y 0
-/*
- * Number of columns of the classic 320 pixel wide screen. The viewport is wider
- * than that on a wide screen, ask display_columns() for how many columns are
- * actually on screen right now.
- */
-#define TILEMAP_SCENE_WIDTH 20
-#define TILEMAP_SCENE_HEIGHT 12
-
-static const int TILE_DAVE_MOD_FRONT     = 1;
-static const int TILE_DAVE_MOD_RIGHT     = 2;
-static const int TILE_DAVE_MOD_LEFT      = 3;
-static const int TILE_DAVE_MOD_JUMPING_RIGHT = 4;
-static const int TILE_DAVE_MOD_JUMPING_LEFT  = 5;
 
 /*
  * Modifiers of tiles, sort of logical category/characteristic.
  * So for example dirt block and red brick block will be 'brick', or
  * vines and fire both will be fire as they cause dave to get burned by it
  */
-static const int EMPTY      = 0;
-static const int CLEAR      = 1;
 static const int BRICK      = 2;
 static const int LOOT       = 3;
 static const int TROPHY     = 4;
@@ -145,14 +128,6 @@ static const int SPRITE_IDX_MONSTER_GUARD1         = 109;
 static const int SPRITE_IDX_MONSTER_GUARD2         = 110;
 static const int SPRITE_IDX_MONSTER_GUARD3         = 111;
 static const int SPRITE_IDX_MONSTER_GUARD4         = 112;
-static const int SPRITE_IDX_MONSTER_ENVY1          = 113;
-static const int SPRITE_IDX_MONSTER_ENVY2          = 114;
-static const int SPRITE_IDX_MONSTER_ENVY3          = 115;
-static const int SPRITE_IDX_MONSTER_ENVY4          = 116;
-static const int SPRITE_IDX_MONSTER_PLATE1         = 117;
-static const int SPRITE_IDX_MONSTER_PLATE2         = 118;
-static const int SPRITE_IDX_MONSTER_PLATE3         = 119;
-static const int SPRITE_IDX_MONSTER_PLATE4         = 120;
 static const int SPRITE_IDX_PLASMA_RIGHT1          = 121;
 static const int SPRITE_IDX_PLASMA_RIGHT2          = 122;
 static const int SPRITE_IDX_PLASMA_RIGHT3          = 123;
@@ -191,7 +166,6 @@ static const int SPRITE_IDX_CURSOR3                = 169;
 static const int SPRITE_IDX_CURSOR4                = 170;
 static const int SPRITE_IDX_BOTTOM_BAR             = 171;
 static const int SPRITE_IDX_TOP_BAR                = 172;
-static const int SPRITES_MAX                       = 172;
 
 
 /*
@@ -262,8 +236,5 @@ void tile_create_bottom_separator(tile_t* t, int x, int y);
 void tile_create_top_separator(tile_t* t, int x, int y);
 
 void tile_create(tile_t* t, char tag[4], int x, int y);
-
-int tile_file_parse(tile_t* map, int *x, int *y, const char* path);
-int tile_map_parse(tile_t* map, int *x, int *y, char* map_str);
 
 #endif

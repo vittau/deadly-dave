@@ -3,8 +3,6 @@
 
 #include "tile.h"
 
-#define BULLET_STATE_FLYING_RIGHT 1
-#define BULLET_STATE_FLYING_LEFT  2
 #define BULLET_STATE_DEAD         3
 
 typedef struct bullet_struct {
@@ -12,7 +10,6 @@ typedef struct bullet_struct {
 
     int speed_x;
     int state;
-    int steps;
     /* Where it was fired from, so its range does not grow with the viewport. */
     int spawn_x;
 

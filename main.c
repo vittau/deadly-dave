@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#define SDL_MAIN_HANDLED
 
 #if defined LINUX || __linux__ || _LINUX
 #include <execinfo.h>
@@ -25,7 +24,7 @@ void sigseg_handler(int sig) {
 }
 #endif
 
-void usage() {
+void usage(void) {
     printf("-w             start windowed \n");
     printf("-l <level>     start in level \n");
     printf("\n");

@@ -49,12 +49,6 @@ void do_input(keys_state_t* state)
             if (event.key.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {
                 state->enter = 1;
             }
-            if (event.key.scancode == SDL_SCANCODE_RIGHTBRACKET && is_repeat == 0) {
-                state->bracer = 1;
-            }
-            if (event.key.scancode == SDL_SCANCODE_LEFTBRACKET && is_repeat == 0) {
-                state->bracel = 1;
-            }
         } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
         }

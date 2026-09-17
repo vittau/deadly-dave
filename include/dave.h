@@ -9,8 +9,6 @@
 #define DAVE_WALKING_STATE_COOLDOWN1_LEFT  2
 #define DAVE_WALKING_STATE_COOLDOWN2_RIGHT  3
 #define DAVE_WALKING_STATE_COOLDOWN2_LEFT  4
-#define DAVE_WALKING_STATE_RIGHT 5
-#define DAVE_WALKING_STATE_LEFT 6
 
 #define DAVE_CLIMBING_STATE_READY 0
 #define DAVE_CLIMBING_STATE_COOLDOWN 1
@@ -26,7 +24,6 @@
 #define DAVE_STATE_JETPACKING  5
 #define DAVE_STATE_BURNING     6
 #define DAVE_STATE_DEAD        7
-#define DAVE_STATE_BLINKING    8
 
 /*
  * Facing is a bit strange because original code has a few nuances. One of them being a front
@@ -82,6 +79,5 @@ typedef struct dave_struct {
 
 void dave_destroy(dave_t *dave);
 dave_t* dave_create(soundfx_t *sfx, int x, int y);
-void dave_update_keys(dave_t *dave, int left, int right, int jump, int down, int jetpack);
 
 #endif

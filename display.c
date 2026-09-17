@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
 
 #include "display.h"
@@ -185,16 +184,8 @@ void display_toggle_scale_mode(void) {
         DISPLAY_SCALE_FIT : DISPLAY_SCALE_PIXEL_PERFECT;
 }
 
-int display_scale_mode(void) {
-    return g_scale_mode;
-}
-
 int display_width(void) {
     return g_geometry.width;
-}
-
-int display_height(void) {
-    return g_geometry.height;
 }
 
 int display_columns(void) {

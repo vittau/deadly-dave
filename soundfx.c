@@ -2,9 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef SDL_MAIN_HANDLED
-#define SDL_MAIN_HANDLED
-#endif
 #include <SDL3/SDL.h>
 
 #include "soundfx.h"
@@ -532,7 +529,7 @@ void SDLCALL game_audio_callback(void *data, SDL_AudioStream *stream,
     sfx->tune_offset += amount;
 }
 
-soundfx_t* soundfx_create() {
+soundfx_t* soundfx_create(void) {
     soundfx_t *sfx = malloc(sizeof(soundfx_t));
     SDL_AudioSpec audio_spec;
 

@@ -4,7 +4,6 @@
 #include "tile.h"
 #include "plasma.h"
 
-#define MONSTER_STATE_BLINKING             0
 #define MONSTER_STATE_ACTIVE               1
 #define MONSTER_STATE_BURNING              2
 #define MONSTER_STATE_DEAD                 3

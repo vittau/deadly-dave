@@ -204,10 +204,6 @@ double invfreq_sin (double theta)
     return sign * sx;
 }
 
-double invfreq_wavelength(double frequency) {
-    return (double)1 / frequency;
-}
-
 // Returns frequency value in hz from inverse-frequency format value
 double invfreq_to_freq(uint16_t invfreq) {
     double invfreq_d = (double)invfreq;

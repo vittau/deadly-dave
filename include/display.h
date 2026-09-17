@@ -70,10 +70,8 @@ void display_quit(void);
  */
 int  display_sync(void);
 void display_toggle_scale_mode(void);
-int  display_scale_mode(void);
 
 int  display_width(void);
-int  display_height(void);
 /* Tile columns touched by the viewport, including a partially visible one. */
 int  display_columns(void);
 /* Horizontal shift for elements that used to be centered on a 320 wide screen. */

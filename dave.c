@@ -655,8 +655,6 @@ static void dave_tick(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         dave_state_dead_routine(dave, map);
     }
 
-    // clear collisions
-    //dave->on_fire = 0;
     dave->on_tree = 0;
 }
 

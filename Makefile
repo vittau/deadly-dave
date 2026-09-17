@@ -6,7 +6,6 @@ H_FILES := include/bullet.h
 H_FILES += include/dave.h
 H_FILES += include/display.h
 H_FILES += include/game.h
-H_FILES += include/input.h
 H_FILES += include/invfreq.h
 H_FILES += include/monster.h
 H_FILES += include/plasma.h

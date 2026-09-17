@@ -36,7 +36,7 @@ typedef struct soundfx_struct {
     void (*resume)(struct soundfx_struct *sfx);
 } soundfx_t;
 
-soundfx_t* soundfx_create();
+soundfx_t* soundfx_create(void);
 void soundfx_destroy(soundfx_t *sfx);
 
 #endif
