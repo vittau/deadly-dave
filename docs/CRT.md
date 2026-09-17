@@ -165,9 +165,22 @@ CannonBall implements it as follows (`rendersurface.cpp`):
   by that coverage; at the original resolution it is the simple every-other-row
   mask.
 
-Deadly Dave keeps this behaviour as it is (odd rows, applied to the game image,
-luminance-weighted), with `shift = 1` and alpha preserved, as everywhere else in
-the framebuffer.
+Deadly Dave keeps the luminance weighting, the `shift = 1` and the preserved
+alpha, but makes the bands **half a game row** tall: a 320x200 picture is
+filtered as if it were shown on a 640x400 screen, with two bands per source row
+instead of one dark row per two. That is the partial-coverage case above, taken
+to the destination's own resolution:
+
+- The dark half of a source row is its lower half. An output row that lands
+  wholly inside it is dimmed, one that lands wholly outside is untouched, and
+  one that straddles the edge is blended between the two in proportion, so the
+  lines stay half a row even when the picture does not scale by a whole number
+  of source rows.
+- Because of this the filtered image needs **more rows than the source**:
+  `filter_output_height()` returns twice the source height when the destination
+  is a whole multiple of it, the destination height itself otherwise (one output
+  row per physical row, so the scaler never drops or doubles one), and the
+  source height when the destination is too short to show half rows at all.
 
 This is deliberately not a shader: it is a CPU pass over the framebuffer, so it
 composes trivially with the NTSC output (NTSC first, then scanlines) and needs
@@ -199,14 +212,18 @@ Consequences:
   intro) is unchanged.
 - The **NTSC blit expands the image horizontally** (7 output columns per 3
   input columns). When NTSC is on, the texture is therefore
-  `SNES_NTSC_OUT_WIDTH(width)` wide and is stretched to the same destination
+  `filter_output_width(width)` wide and is stretched to the same destination
   rectangle, so the picture is the same size on screen, just filtered.
+- The **scanlines grow the texture vertically** to the destination's own height
+  (`filter_output_height()`, see above), so `display_build_texture()` tracks
+  both dimensions and rebuilds when either one changes.
 - The **input palette is quantised to RGB555**: the table is built for 32768
   colours (`entry = R5<<10 | G5<<5 | B5`), which is the smallest quantisation
   that does not visibly band the artwork. The table is ~16 MB and is built the
   first time NTSC is enabled, then kept; enabling it again is instant.
-- Scanlines are applied to the game buffer (or to the NTSC output) at the source
-  resolution, so they scale with the picture exactly as in CannonBall.
+- Scanlines are applied to the game buffer (or to the NTSC output) after NTSC
+  and are resampled to the destination's vertical resolution, so they stay half
+  a game row at any window size instead of getting thicker with the scale.
 - The effect is a **frame** operation, not a logic-tick one: it runs once per
   presented frame in `display_present()`, on the same side of the two clocks as
   `display_sync()`.
@@ -219,7 +236,7 @@ The pause menu gets a `FILTERS` row that cycles:
 FILTERS: OFF  ->  SCANLINES  ->  NTSC  ->  BOTH  ->  OFF
 ```
 
-- `SCANLINES` is the every-other-row dimming above.
+- `SCANLINES` is the half-row dimming above.
 - `NTSC` is the Blargg composite preset.
 - `BOTH` is NTSC followed by scanlines on the result.
 

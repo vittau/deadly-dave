@@ -33,9 +33,13 @@ except the icons.
   `display.c`, and update its expected widths if the geometry changes. It links
   `filter.c` and `ntsc.c` as well, because `display.c` does; `tests/Makefile`
   adds `-lm` for the NTSC filter's `sin`/`cos`/`pow`/`exp`.
-- `test_display` and `test_invfreq` (which writes `out.raw` into `tests/`) run
-  headless. `test_monster` opens a window and needs a real display, so CI runs
-  none of them.
+- `./tests/test_filter` checks `filter_output_height` and the scanline pattern
+  (`filter_render` at twice and three times the source height, where a row that
+  straddles the dark half must come out blended). It is pure and links only
+  `filter.c` and `ntsc.c`.
+- `test_display`, `test_filter` and `test_invfreq` (which writes `out.raw` into
+  `tests/`) run headless. `test_monster` opens a window and needs a real display,
+  so CI runs none of them.
 - `test_monster` does not link `game.c` or `display.c`: it carries its own copies
   of the drawing, input and asset loading code. It exercises `tile.c`,
   `plasma.c` and `monster.c` for real, but a change in `game.c` will not show up
@@ -57,8 +61,16 @@ except the icons.
   first time NTSC is enabled and only frees it in `filter_quit()`.
 - `filter.c` / `include/filter.h` owns the `FILTERS` mode
   (OFF/SCANLINES/NTSC/BOTH), quantises the framebuffer to RGB555, runs the
-  blitter, and applies the scanlines (every odd row, luminance-weighted `>> 1`,
-  alpha preserved, same as CannonBall).
+  blitter, and applies the scanlines (luminance-weighted `>> 1`, alpha preserved,
+  like CannonBall). The bands are **half a game row** tall, as if 320x200 were
+  shown on a 640x400 screen, so the scanlines need more rows than the source:
+  `filter_output_height(src, dst)` returns `2*src` when `dst` is a multiple of
+  it, `dst` itself otherwise (a row per physical row, no row dropped or doubled
+  by the scaler), and `src` when the picture is too short for half rows. A row
+  that straddles the edge of the dark half is mixed between dimmed and original.
+  `display.c` must therefore size the texture with **both** `filter_output_width`
+  and `filter_output_height`, and rebuild it when either changes; `filter_render`
+  takes `src_height` and `out_height`.
   NTSC widens the image: `filter_output_width(w)` is `((w-1)/3 + 1) * 7`, so a
   320 pixel framebuffer becomes 749.
 - Both are `-lm` users (`sin`/`cos`/`pow`/`exp`), hence the extra link line in
@@ -148,7 +160,7 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
 - The game draws into an offscreen `RGBA8888` buffer that `display_lock()`
   hands out, not straight into the texture. `display_present()` locks the
   texture itself and runs `filter_render()` while copying, which is what lets
-  the `FILTERS` mode change the texture width mid-run. `display_unlock()` is a
+  the `FILTERS` mode change the texture width and height mid-run. `display_unlock()` is a
   no-op; do not move drawing back onto the texture or the filter loses its
   source. The filter is a frame operation, applied once per presented frame,
   so it goes on the `display_present()` side of the two clocks, never inside

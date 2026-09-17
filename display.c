@@ -9,8 +9,13 @@
 
 static SDL_Renderer *g_display_renderer = NULL;
 static SDL_Texture *g_display_texture = NULL;
-/* Width of the texture currently allocated, which is the filtered width. */
+/* Size of the texture currently allocated, which is the filtered size. */
 static int g_texture_width = 0;
+/*
+ * The filtered height, which the scanline filter grows to the destination's own
+ * vertical resolution and the other modes keep at DISPLAY_HEIGHT.
+ */
+static int g_texture_height = 0;
 /*
  * The game draws into this offscreen buffer instead of straight into the
  * texture. display_present() runs the output filter while copying it into the
@@ -128,8 +133,9 @@ display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode
     return geometry;
 }
 
-static int display_build_texture(int width) {
-    if (g_display_texture != NULL && g_texture_width == width) {
+static int display_build_texture(int width, int height) {
+    if (g_display_texture != NULL && g_texture_width == width &&
+        g_texture_height == height) {
         return 0;
     }
     if (g_display_texture != NULL) {
@@ -138,11 +144,12 @@ static int display_build_texture(int width) {
     }
 
     g_display_texture = SDL_CreateTexture(g_display_renderer, SDL_PIXELFORMAT_RGBA8888,
-        SDL_TEXTUREACCESS_STREAMING, width, DISPLAY_HEIGHT);
+        SDL_TEXTUREACCESS_STREAMING, width, height);
 
     if (g_display_texture == NULL) {
         printf("Failed to create the framebuffer texture. Error: (%s) \n", SDL_GetError());
         g_texture_width = 0;
+        g_texture_height = 0;
         return -1;
     }
 
@@ -150,6 +157,7 @@ static int display_build_texture(int width) {
     SDL_SetTextureScaleMode(g_display_texture, SDL_SCALEMODE_NEAREST);
 
     g_texture_width = width;
+    g_texture_height = height;
     return 0;
 }
 
@@ -204,7 +212,8 @@ int display_init(SDL_Renderer *renderer, int scale_mode) {
     if (display_build_frame() != 0) {
         return -1;
     }
-    return display_build_texture(filter_output_width(g_geometry.width));
+    return display_build_texture(filter_output_width(g_geometry.width),
+        filter_output_height(DISPLAY_HEIGHT, g_geometry.dst.h));
 }
 
 void display_quit(void) {
@@ -213,6 +222,7 @@ void display_quit(void) {
         g_display_texture = NULL;
     }
     g_texture_width = 0;
+    g_texture_height = 0;
     free(g_frame_pixels);
     g_frame_pixels = NULL;
     g_frame_width = 0;
@@ -238,10 +248,11 @@ int display_sync(void) {
     display_build_frame();
     /*
      * Rebuilt here as well as in display_present(), so a filter mode change
-     * (which changes the filtered width) is picked up even when the window did
+     * (which changes the filtered size) is picked up even when the window did
      * not move.
      */
-    display_build_texture(filter_output_width(g_geometry.width));
+    display_build_texture(filter_output_width(g_geometry.width),
+        filter_output_height(DISPLAY_HEIGHT, g_geometry.dst.h));
 
     return resized;
 }
@@ -364,13 +375,15 @@ void display_present(void) {
     void *texture_pixels = NULL;
     int texture_pitch = 0;
     int out_width;
+    int out_height;
 
     if (g_display_renderer == NULL || g_frame_pixels == NULL) {
         return;
     }
 
     out_width = filter_output_width(g_geometry.width);
-    if (display_build_texture(out_width) != 0) {
+    out_height = filter_output_height(DISPLAY_HEIGHT, g_geometry.dst.h);
+    if (display_build_texture(out_width, out_height) != 0) {
         return;
     }
 
@@ -381,7 +394,7 @@ void display_present(void) {
 
     filter_render(g_frame_pixels, g_frame_width, g_geometry.width,
         (uint32_t *)texture_pixels, texture_pitch / (int)sizeof(uint32_t),
-        DISPLAY_HEIGHT);
+        DISPLAY_HEIGHT, out_height);
 
     SDL_UnlockTexture(g_display_texture);
 
