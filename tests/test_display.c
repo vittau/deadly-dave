@@ -108,8 +108,9 @@ int main(void) {
     check_exact(3840, 2160, DISPLAY_SCALE_PIXEL_PERFECT, 384, 3840, 2000);
     check_exact(1920, 1080, DISPLAY_SCALE_FIT, 352, 1901, 1080);
 
-    /* Ultra wide screens stop at the widest framebuffer the levels can fill. */
-    check_exact(3440, 1440, DISPLAY_SCALE_PIXEL_PERFECT, 384, 2688, 1400);
+    /* Ultra wide screens keep widening the framebuffer, they do not stop. */
+    check_exact(3440, 1440, DISPLAY_SCALE_PIXEL_PERFECT, 488, 3416, 1400);
+    check_exact(5120, 1440, DISPLAY_SCALE_PIXEL_PERFECT, 728, 5096, 1400);
 
     /* A window with no size at all must not produce a broken framebuffer. */
     degenerate = display_compute_geometry(0, 0, DISPLAY_SCALE_PIXEL_PERFECT);

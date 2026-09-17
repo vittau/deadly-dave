@@ -80,6 +80,7 @@ plasma_t* plasma_create_left(int x, int y) {
 
     plasma->speed_x = -2;
     plasma->state = PLASMA_STATE_FLYING_LEFT;
+    plasma->spawn_x = x;
     plasma->get_sprite = &plasma_get_sprite;
     plasma->tick = &plasma_tick;
     plasma->is_dead = &plasma_is_dead;
@@ -95,6 +96,7 @@ plasma_t* plasma_create_right(int x, int y) {
 
     plasma->speed_x = 2;
     plasma->state = PLASMA_STATE_FLYING_RIGHT;
+    plasma->spawn_x = x;
     plasma->get_sprite = &plasma_get_sprite;
     plasma->tick = &plasma_tick;
     plasma->is_dead = &plasma_is_dead;

@@ -77,6 +77,7 @@ bullet_t* bullet_create_internal(int x, int y, int speed) {
     bullet->speed_x = speed;
     bullet->state = 0;
     bullet->steps = 0;
+    bullet->spawn_x = x;
     bullet->tick = &bullet_tick;
     bullet->is_dead = &bullet_is_dead;
 

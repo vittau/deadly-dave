@@ -125,8 +125,23 @@ void render_tile_idx_row(int tile_idx, int y) {
     }
 }
 
-void draw_tile_offset(tile_t *tile, int x_offset) {
-    render_tile_idx(tile->get_sprite(tile), tile->x - (x_offset * 16), tile->y);
+/*
+ * Horizontal position of the visible window in level pixels. A level narrower
+ * than the viewport is centered, leaving black on both sides, rather than being
+ * pinned to the left edge; a level wider than the viewport scrolls as usual.
+ */
+int game_view_x(game_context_t *game) {
+    int screen_width = display_width();
+    int level_width = (int)game->level_columns * TILE_SIZE;
+
+    if (level_width < screen_width) {
+        return -((screen_width - level_width) / 2);
+    }
+    return game->scroll_offset * TILE_SIZE;
+}
+
+void draw_tile_offset(tile_t *tile, int view_x) {
+    render_tile_idx(tile->get_sprite(tile), tile->x - view_x, tile->y);
 }
 
 void draw_tile(tile_t *tile) {
@@ -198,61 +213,71 @@ void draw_popup_box(int x, int y, int rows, int columns) {
 }
 
 void draw_map(game_context_t *game, tile_t *map) {
-    int first = game->scroll_offset * TILEMAP_HEIGHT;
-    int count = display_columns() * TILEMAP_HEIGHT;
+    int view_x = game_view_x(game);
+    int first_col = view_x / TILE_SIZE;
+    int first;
+    int count;
 
-    if (first < 0) {
-        first = 0;
+    if (first_col < 0) {
+        first_col = 0;
     }
+    first = first_col * TILEMAP_HEIGHT;
+    /* One extra column on each side keeps tiles from popping at the edges. */
+    count = (display_columns() + 2) * TILEMAP_HEIGHT;
     if ((first + count) > (TILEMAP_WIDTH * TILEMAP_HEIGHT)) {
         count = (TILEMAP_WIDTH * TILEMAP_HEIGHT) - first;
+    }
+    if (count < 0) {
+        count = 0;
     }
 
     for (int i = 0; i < count; i++) {
         if (map[first + i].sprites[0] != 0) {
-            draw_tile_offset(&map[first + i], game->scroll_offset);
+            draw_tile_offset(&map[first + i], view_x);
         }
     }
 }
 
 
-void draw_bullet_offset(bullet_t *bullet, assets_t *assets, int x_offset) {
+void draw_bullet_offset(bullet_t *bullet, assets_t *assets, int view_x) {
     if (bullet == NULL) {
         return;
     }
-    draw_tile_offset(bullet->tile, x_offset);
+    draw_tile_offset(bullet->tile, view_x);
 }
 
-void draw_dave_offset(dave_t *dave, assets_t *assets, int x_offset) {
+void draw_dave_offset(dave_t *dave, assets_t *assets, int view_x) {
     if (dave->tile->get_sprite(dave->tile) != 0) {
-        draw_tile_offset(dave->tile, x_offset);
+        draw_tile_offset(dave->tile, view_x);
     }
 }
 
-void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], assets_t *assets, int x_offset) {
+void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], assets_t *assets, int view_x) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
         if (monsters[i] == NULL) {
             continue;
         }
         if  (monsters[i]->tile->get_sprite(monsters[i]->tile) != 0) {
                 render_tile_idx(monsters[i]->tile->get_sprite(monsters[i]->tile),
-                    monsters[i]->tile->x - (x_offset * 16), monsters[i]->tile->y);
+                    monsters[i]->tile->x - view_x, monsters[i]->tile->y);
         }
         if (monsters[i]->plasma != NULL) {
             int sprite = monsters[i]->plasma->get_sprite(monsters[i]->plasma);
             if (sprite != 0) {
                 render_tile_idx(monsters[i]->plasma->get_sprite(monsters[i]->plasma),
-                    monsters[i]->plasma->tile->x - (x_offset * 16), monsters[i]->plasma->tile->y);
+                    monsters[i]->plasma->tile->x - view_x, monsters[i]->plasma->tile->y);
             }
         }
     }
 }
 
 void draw_scrollable_area(game_context_t *game, tile_t *map) {
+    int view_x = game_view_x(game);
+
     draw_map(game, map);
-    draw_dave_offset(game->dave, g_assets, game->scroll_offset);
-    draw_monsters_offset(game->monsters, g_assets, game->scroll_offset);
-    draw_bullet_offset(game->bullet, g_assets, game->scroll_offset);
+    draw_dave_offset(game->dave, g_assets, view_x);
+    draw_monsters_offset(game->monsters, g_assets, view_x);
+    draw_bullet_offset(game->bullet, g_assets, view_x);
 }
 
 void draw_x_levels_to_go(int x) {
@@ -322,6 +347,72 @@ void unload_assets(assets_t *assets) {
     }
 }
 
+/*
+ * Makes the black background of a sprite transparent. The background always
+ * reaches the border of the tile, while black inside the art (an outline, a
+ * detail) is enclosed, so only the black reachable from the border is cleared.
+ */
+static void key_out_black_background(SDL_Surface *surface) {
+    int w;
+    int h;
+    int pitch;
+    uint32_t *pixels;
+    int *stack;
+    int top = 0;
+
+    if (surface == NULL || surface->w < 1 || surface->h < 1) {
+        return;
+    }
+
+    w = surface->w;
+    h = surface->h;
+    pixels = (uint32_t *)surface->pixels;
+    pitch = surface->pitch / (int)sizeof(uint32_t);
+    stack = malloc(sizeof(int) * (size_t)w * (size_t)h);
+    if (stack == NULL) {
+        return;
+    }
+
+/* Black is R=G=B=0 in RGBA8888, and the alpha byte is the low one. */
+#define PUSH_BLACK(i) do {                                              \
+        if ((pixels[(i)] >> 8) == 0 && (pixels[(i)] & 0xFF) != 0) {     \
+            pixels[(i)] &= 0xFFFFFF00;                                  \
+            stack[top++] = (i);                                         \
+        }                                                               \
+    } while (0)
+
+    for (int x = 0; x < w; x++) {
+        PUSH_BLACK(x);
+        PUSH_BLACK((h - 1) * pitch + x);
+    }
+    for (int y = 0; y < h; y++) {
+        PUSH_BLACK(y * pitch);
+        PUSH_BLACK(y * pitch + (w - 1));
+    }
+
+    while (top > 0) {
+        int i = stack[--top];
+        int y = i / pitch;
+        int x = i - y * pitch;
+
+        if (x > 0) {
+            PUSH_BLACK(i - 1);
+        }
+        if (x < w - 1) {
+            PUSH_BLACK(i + 1);
+        }
+        if (y > 0) {
+            PUSH_BLACK(i - pitch);
+        }
+        if (y < h - 1) {
+            PUSH_BLACK(i + pitch);
+        }
+    }
+
+#undef PUSH_BLACK
+    free(stack);
+}
+
 int load_assets() {
     char fname[64];
     int loaded = 0;
@@ -333,8 +424,20 @@ int load_assets() {
         snprintf(fname, sizeof(fname), "res/tiles/tile%u.bmp", i);
         if (access(fname, 0) == 0) {
             SDL_Surface *surface = SDL_LoadBMP(fname);
-            g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
-            SDL_DestroySurface(surface);
+            if (surface != NULL) {
+                g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
+                /*
+                 * Monsters, plasma and the bullet ship as 24 bit BMPs with no
+                 * alpha channel, so their black background would be drawn
+                 * opaque on top of the level. Only those are keyed out, the
+                 * level tiles and the HUD bars are meant to be opaque.
+                 */
+                if (!SDL_ISPIXELFORMAT_ALPHA(surface->format) &&
+                        i >= SPRITE_IDX_MONSTER_SPIDER1 && i <= SPRITE_IDX_BULLET_LEFT) {
+                    key_out_black_background(g_assets->imgdata[i]);
+                }
+                SDL_DestroySurface(surface);
+            }
             loaded++;
         }
     }
@@ -819,7 +922,14 @@ void game_do_plasmas(game_context_t *game, tile_t *map, keys_state_t *keys) {
                     plasma_destroy(game->monsters[i]->plasma);
                     game->monsters[i]->plasma = NULL;
                 } else {
-                    game->monsters[i]->plasma->tick(game->monsters[i]->plasma, map, (game->scroll_offset * 16) - 80, (game->scroll_offset * 16) + display_width() + 80);
+                    /*
+                     * The range is measured from where it was fired, like the
+                     * original 320 pixel view did, so a wider viewport does not
+                     * make a plasma travel further.
+                     */
+                    int reach = DISPLAY_BASE_WIDTH + 80;
+                    plasma_t *plasma = game->monsters[i]->plasma;
+                    plasma->tick(plasma, map, plasma->spawn_x - reach, plasma->spawn_x + reach);
                 }
             }
         }
@@ -828,7 +938,10 @@ void game_do_plasmas(game_context_t *game, tile_t *map, keys_state_t *keys) {
 
 void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (game->bullet != NULL) {
-        game->bullet->tick(game->bullet, map, (game->scroll_offset * 16), (game->scroll_offset * 16) + display_width());
+        /* Same as the plasma: the bullet's range is the original one. */
+        int reach = DISPLAY_BASE_WIDTH;
+        game->bullet->tick(game->bullet, map,
+            game->bullet->spawn_x - reach, game->bullet->spawn_x + reach);
 
         if (game->bullet->is_dead(game->bullet)) {
             bullet_destroy(game->bullet);
@@ -944,9 +1057,9 @@ int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *keys) {
 
     clear_screen();
     draw_map(game, map);
-    draw_monsters_offset(game->monsters, g_assets, game->scroll_offset);
+    draw_monsters_offset(game->monsters, g_assets, game_view_x(game));
     if (game->blinking_timer >= 11 && game->blinking_timer <= 20) {
-        draw_dave_offset(dave, g_assets, game->scroll_offset);
+        draw_dave_offset(dave, g_assets, game_view_x(game));
     }
     draw_level_frame(game);
 
@@ -1150,7 +1263,12 @@ int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         return G_STATE_NONE;
     }
 
-    if (game->dave->tile->x > (display_width() - 20)) {
+    /*
+     * The warp corridor ends when Dave leaves the view, or at the level's right
+     * edge when the viewport is wider than the corridor and shows all of it.
+     */
+    if ((game->dave->tile->x - game_view_x(game)) > (display_width() - 20) ||
+            game->dave->tile->x > ((int)game->level_columns * TILE_SIZE) - 20) {
         if (game->level_secret_state == SECRET_LEVEL_ENTER) {
             game->level_secret_state = SECRET_LEVEL_VISITED;
         } else {

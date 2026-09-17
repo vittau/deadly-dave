@@ -32,12 +32,19 @@ except the icons.
 - Never `SDL_free()` the pointer from `SDL_GetBasePath()`. SDL caches it and
   frees it on `SDL_Quit`, so freeing it is a double free at exit (this really
   crashed before).
-- Tiles are 32 bit BMPs converted to RGBA8888; a pixel is transparent when
-  `(pixel & 0x000000FF) == 0` (the alpha byte). See `render_tile_idx`.
+- Tiles are BMPs converted to RGBA8888; a pixel is transparent when
+  `(pixel & 0x000000FF) == 0` (the alpha byte), not by a colour key. See
+  `render_tile_idx`. Many tiles ship as 24 bit BMPs with no alpha at all, so the
+  entity sprites are keyed out at load (`key_out_black_background`), which clears
+  only the black reachable from the tile border and leaves enclosed black alone.
+  Do not apply that to level or HUD tiles: they are meant to be opaque.
 - The framebuffer is always 200px tall but its width follows the screen aspect.
   Do not hardcode 320. Use `display_width()`, `display_columns()`,
   `display_center_offset()` / `display_right_offset()`. `display_sync()` runs
-  once per frame before `display_lock()`.
+  once per frame before `display_lock()`. A level narrower than the viewport is
+  centred by `game_view_x()` with black on the sides, and projectile range is
+  kept at the original 320px on purpose, so a wider window changes nothing but
+  what you can see.
 - Jump is edge triggered in `dave.c` (`jump_pressed`, `key_up_prev`): it starts
   on a fresh press while grounded and a press in the air is dropped, never
   buffered for the landing.

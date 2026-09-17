@@ -20,18 +20,16 @@
  *     v                    v
  *     200                  bottom of the bottom bar
  *
- * The width, on the other hand, follows the aspect-ratio of the display so that
- * a wide screen shows more of the level instead of being stretched:
- *
- *    4:3   -> 320 (or a little more)    16:10 -> 320   16:9 -> up to 384
- *
- * DISPLAY_MAX_WIDTH is 24 tile columns. It is a content limit, not a technical
- * one: the narrowest level (warp_down, 23 columns) and the warp corridor
- * (27 columns) still look right at that width.
+ * The width, on the other hand, follows the aspect-ratio of the display, so a
+ * wide screen shows more of the level instead of a stretched picture, and there
+ * is no fixed limit: the viewport is as wide as the screen asks for, up to the
+ * width of the widest level the tile map can hold (100 columns). A level
+ * narrower than the viewport is centered, with black on both sides.
  */
 #define DISPLAY_HEIGHT       200
 #define DISPLAY_BASE_WIDTH   320
-#define DISPLAY_MAX_WIDTH    384
+/* The tile map is 100 columns wide, that is all the level there is to show. */
+#define DISPLAY_MAX_WIDTH    1600
 #define DISPLAY_TILE_SIZE    16
 
 /*

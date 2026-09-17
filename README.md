@@ -1,109 +1,78 @@
-## Deadly Dave
+# Deadly Dave
 
-An open source implementation of *Dangerous Dave*, a 1988 DOS game by John Romero.
+![Level 2, whole, on a wide viewport](res/screenshots/screen4.png)
 
+An open source reimplementation of *Dangerous Dave*, a 1988 DOS game by John
+Romero, that runs natively on the machines we actually use now. The same
+sprites, the same levels, the same sound effects and the same feel, without an
+emulator and without anything to install.
 
-Main focus:
- 1. Replicate look & feel.
- 2. Run on modern systems.
+## Why this one
 
-### Controls
+- **Native on Windows, macOS and Linux.** Every download is self-contained:
+  SDL3 is built in, Windows needs no runtime, on macOS it is a regular app you
+  double-click with no terminal in sight, and on Linux the only things it uses
+  are the libraries every desktop already ships.
+- **Any display, any aspect ratio.** The viewport grows with the screen instead
+  of stretching the picture, so a wide screen shows more of the level rather
+  than a flattened one. A level narrower than the viewport is centred, with
+  black on the sides, and everything is scaled by whole numbers so the pixels
+  stay square and sharp. `F5` switches to a mode that fills the whole screen,
+  and the window can be resized to whatever you like. The screenshot above is
+  level 2 in full, on a screen wide enough to hold it.
+- **Keyboard or controller, together.** The keyboard keeps the feel of the
+  original; a controller works out of the box and can be plugged in while
+  playing.
+- **Starts full screen.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere else,
+  switches between full screen and windowed. `-w` starts windowed instead.
+- **The whole game**, nine levels and the secret one, with the intro and the
+  original sound effects decoded from the game's own data.
 
-| Action        | Keys                        |
-| ------------- | --------------------------- |
-| Move          | `A` / `D`, or left / right  |
-| Jump          | `W`, or up                  |
-| Climb down    | `S`, or down                |
-| Shoot         | `Space`, or left Ctrl       |
-| Jetpack       | `J`                         |
+![Level 6](res/screenshots/screen3.png)
 
-A controller works as well, through SDL's gamepad API, so the buttons are in the
-same place whatever the system or the pad:
+## Controls
 
-| Action        | Controller                            |
-| ------------- | ------------------------------------- |
-| Move          | left stick or D-pad left / right      |
-| Climb up      | left stick or D-pad up (never jumps)  |
-| Climb down    | left stick or D-pad down              |
-| Jump          | `A`                                   |
-| Jetpack       | `B`                                   |
-| Shoot         | `X`, or right shoulder                |
-| Quit popup    | `Start` (the Escape key)              |
+| Action        | Keyboard                    | Controller                       |
+| ------------- | --------------------------- | -------------------------------- |
+| Move          | `A` / `D`, or left / right  | left stick or D-pad left / right |
+| Jump          | `W`, or up                  | `A`                              |
+| Climb         | `W` / `S`, or up / down     | stick or D-pad up / down         |
+| Shoot         | `Space`, or left Ctrl       | `X`, or right shoulder           |
+| Jetpack       | `J`                         | `B`                              |
+| Quit popup    | `Escape`                    | `Start`                          |
 
-The up direction only climbs and flies: on a pad jumping whenever the stick or
-the D-pad went up would be unplayable, so only `A` jumps.
+On the keyboard up jumps, faithful to the original. On a pad it only climbs and
+flies, because jumping whenever a stick went up would be miserable, so there
+`A` is the jump.
 
-### Building
+## Getting it
 
-The game needs **SDL 3.4.16** or newer and nothing else.
+Download the package for your system from the
+[releases page](https://github.com/vittau/deadly-dave/releases). Each one is a
+folder with the game inside and nothing to install:
+
+| System  | Package                                           |
+| ------- | ------------------------------------------------- |
+| Windows | `deadly-dave-windows-x86_64.zip`                  |
+| macOS   | `deadly-dave-macos-universal.zip` (Intel + Apple) |
+| Linux   | `deadly-dave-linux-x86_64.tar.gz`                 |
+
+On macOS, drag `Deadly Dave.app` to Applications. On Windows, unzip and run
+`deadly-dave.exe`. On Linux, unpack and run `./deadly-dave`.
+
+## Building it
+
+The game needs **SDL 3.4.16** or newer and a C99 compiler.
 
     make                 # uses pkg-config to find SDL3
     make app             # macOS: wraps the game in "Deadly Dave.app"
-    make icon            # regenerates assets/icon.* (needs python3)
     cd tests && make     # unit tests
 
-The CMake build fetches and links SDL3 statically instead. On macOS the `app`
-target produces a bundle with the resources inside it, so the game can be
-double-clicked and opens without a terminal.
+The CMake build fetches and links SDL3 statically instead, which is what the
+releases use. Pushing a tag (`git tag v1.0.0 && git push origin v1.0.0`) builds
+the three packages and publishes them.
 
-Every build uses the same icon, the Dave sprite from `res/tiles/tile55.bmp`,
-turned into an `.icns` for the macOS bundle, an `.ico` embedded in the Windows
-executable and a `.png` for the Linux window.
+## Acknowledgments
 
-### Releases
-
-Pushing a tag builds portable packages for the three systems and attaches them
-to a GitHub release:
-
-    git tag v1.0.0
-    git push origin v1.0.0
-
-The workflow can also be run by hand from the Actions tab, which builds the
-packages without publishing a release. Each package is a self-contained folder
-(the executable plus the `res` directory it reads at runtime) and needs nothing
-installed:
-
-| System  | Package                              |
-| ------- | ------------------------------------ |
-| Windows | `deadly-dave-windows-x86_64.zip`     |
-| macOS   | `deadly-dave-macos-universal.zip`    |
-| Linux   | `deadly-dave-linux-x86_64.tar.gz`    |
-
-SDL3 is linked statically everywhere, the C runtime is static on Windows and the
-macOS build is a universal binary. On Linux the only things used from the system
-are the C library and the video/audio libraries that every desktop already ships
-(X11 or Wayland, ALSA or PulseAudio).
-
-### Display and aspect-ratio
-
-The game draws into a low resolution framebuffer that is always 200 pixels tall,
-like the original 320x200 DOS screen, and is scaled up to the window keeping
-square pixels. The width follows the shape of the display, so a wide screen
-shows more of the level instead of a stretched picture:
-
-| Display           | Framebuffer | Notes                                    |
-| ----------------- | ----------- | ---------------------------------------- |
-| 16:10 (1280x800)  | 320x200     | native shape, fills the screen (4x)      |
-| 16:10 (1920x1200) | 320x200     | native shape, fills the screen (6x)      |
-| 16:9  (1920x1080) | 384x200     | 4 extra tile columns, 5x, thin bars      |
-| 4:3   (1024x768)  | 336x200     | close to the native shape, bars top/down |
-
-Vertically the picture is positioned so that the scene, the part between the two
-HUD bars, ends up centered on the screen. The framebuffer is not centered
-blindly because the bottom bar is taller than the top one, which would leave the
-scene sitting a little high.
-
-By default the picture is scaled by a whole number, which keeps every pixel the
-same size, and any leftover room becomes a black border. `F5` switches to a
-scaling that fills the whole screen instead, at the cost of unevenly sized
-pixels. The window can also be resized freely while playing.
-
-The game starts full screen. `Cmd`+`Enter` (macOS) or `Alt`+`Enter` (elsewhere)
-switches between full screen and windowed, and `-w` starts windowed instead.
-
-### Acknowledgments
 * MaiZure    - for starting the 'lmdave' project this is based on.
 * Malvineous - for allowing the unpacking of original resources from dave.exe.
-
-
-
