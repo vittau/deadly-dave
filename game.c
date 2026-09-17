@@ -2,8 +2,19 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <unistd.h>
 #include <math.h>
+
+/* access() and chdir() are POSIX; MSVC has them in io.h/direct.h, underscored. */
+#if defined(_WIN32)
+#include <direct.h>
+#include <io.h>
+#define dd_access _access
+#define dd_chdir _chdir
+#else
+#include <unistd.h>
+#define dd_access access
+#define dd_chdir chdir
+#endif
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
@@ -429,7 +440,7 @@ int load_assets() {
         g_assets->imgdata[i] = NULL;
         memset(fname, '\0', sizeof(fname));
         snprintf(fname, sizeof(fname), "res/tiles/tile%u.bmp", i);
-        if (access(fname, 0) == 0) {
+        if (dd_access(fname, 0) == 0) {
             SDL_Surface *surface = SDL_LoadBMP(fname);
             if (surface != NULL) {
                 g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
@@ -1629,7 +1640,7 @@ int game_main(int is_windowed, int starting_level) {
      */
     const char *base_path = SDL_GetBasePath();
     if (base_path != NULL) {
-        if (chdir(base_path) != 0) {
+        if (dd_chdir(base_path) != 0) {
             printf("Failed to switch to the game directory '%s'. \n", base_path);
         }
         /* SDL caches this string and frees it itself on SDL_Quit. */
