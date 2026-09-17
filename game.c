@@ -508,7 +508,9 @@ static void draw_pause_menu(game_context_t *game) {
 
     for (int i = 0; i < PAUSE_OPTION_COUNT; i++) {
         pause_menu_option_text(game, i, line, sizeof(line));
-        draw_text_line_black(line, box_x + 16, box_y + 24 + (i * 10));
+        /* +18, not +16: the cursor's biggest frame fills its 8x8 tile, so it
+         * would otherwise touch the text (the tile ends at box_x + 16). */
+        draw_text_line_black(line, box_x + 18, box_y + 24 + (i * 10));
     }
 
     game->flashing_cursor.x = box_x + 8;
