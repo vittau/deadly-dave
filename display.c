@@ -31,6 +31,7 @@ static int clamp_width(int width) {
 display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode) {
     display_geometry_t geometry;
     int scale;
+    int shift;
 
     if (out_w < 1 || out_h < 1) {
         out_w = DISPLAY_BASE_WIDTH;
@@ -93,6 +94,21 @@ display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode
 
     geometry.dst.x = (out_w - geometry.dst.w) / 2;
     geometry.dst.y = (out_h - geometry.dst.h) / 2;
+
+    /*
+     * What the player looks at is the scene between the two HUD bars, and the
+     * bottom bar is taller than the top one, so a picture centered as a whole
+     * still shows the scene a little high. Move it down by half the difference
+     * of the bars. When the picture already fills the window that runs a few
+     * pixels past the bottom edge, over the black bottom bar, which is fine.
+     */
+    shift = (DISPLAY_BOTTOM_BAR - DISPLAY_TOP_BAR) / 2;
+    if (geometry.scale > 0) {
+        shift = shift * geometry.scale;
+    } else {
+        shift = (shift * geometry.dst.h) / DISPLAY_HEIGHT;
+    }
+    geometry.dst.y = geometry.dst.y + shift;
 
     return geometry;
 }

@@ -371,14 +371,37 @@ void init_game(game_context_t *game) {
     game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
 
     tile_create_flashing_cursor(&game->flashing_cursor, 224, 96);
-    tile_create_bottom_separator(&game->bottom_separator, 0, 166);
-    tile_create_top_separator(&game->top_separator, 0, 11);
+    tile_create_bottom_separator(&game->bottom_separator, 0, DISPLAY_SCENE_BOTTOM);
+    /* The 4 pixel separator plus a 1 pixel gap sit at the bottom of the top bar. */
+    tile_create_top_separator(&game->top_separator, 0, DISPLAY_SCENE_TOP - 5);
     tile_create_grail_banner(&game->grail_banner, 70, 183);
     tile_create_gun_banner(&game->gun_banner, 240, 170);
 
     for (int i = 0; i < MAX_MONSTERS; i++) {
         game->monsters[i] = NULL;
     }
+}
+
+/* The desktop's usual full screen shortcut: Command on macOS, Alt elsewhere. */
+#if defined(__APPLE__)
+#define TOGGLE_FULLSCREEN_MOD SDL_KMOD_GUI
+#else
+#define TOGGLE_FULLSCREEN_MOD SDL_KMOD_ALT
+#endif
+
+/*
+ * A window created full screen has no windowed geometry for SDL to go back to,
+ * so one is picked here. The window stays resizable in both modes.
+ */
+static void toggle_fullscreen(void) {
+    if ((SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0) {
+        SDL_SetWindowFullscreen(g_window, false);
+        SDL_SetWindowSize(g_window, DISPLAY_BASE_WIDTH * 3, DISPLAY_HEIGHT * 3);
+        SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    } else {
+        SDL_SetWindowFullscreen(g_window, true);
+    }
+    SDL_SyncWindow(g_window);
 }
 
 void get_keys(keys_state_t* state) {
@@ -409,7 +432,11 @@ void get_keys(keys_state_t* state) {
                 state->jetpack = 1;
             }
             if (event.key.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {
-                state->enter = 1;
+                if ((event.key.mod & TOGGLE_FULLSCREEN_MOD) != 0) {
+                    toggle_fullscreen();
+                } else {
+                    state->enter = 1;
+                }
             }
             if (event.key.scancode == SDL_SCANCODE_F5 && is_repeat == 0) {
                 display_toggle_scale_mode();
@@ -1321,8 +1348,6 @@ int game_main(int is_windowed, int starting_level) {
     if (is_windowed) {
         SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     }
-
-    SDL_SetWindowMinimumSize(g_window, DISPLAY_BASE_WIDTH, DISPLAY_HEIGHT);
 
     g_renderer = SDL_CreateRenderer(g_window, SDL_SOFTWARE_RENDERER);
 

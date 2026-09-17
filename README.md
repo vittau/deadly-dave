@@ -30,10 +30,18 @@ shows more of the level instead of a stretched picture:
 | 16:9  (1920x1080) | 384x200     | 4 extra tile columns, 5x, thin bars      |
 | 4:3   (1024x768)  | 336x200     | close to the native shape, bars top/down |
 
+Vertically the picture is positioned so that the scene, the part between the two
+HUD bars, ends up centered on the screen. The framebuffer is not centered
+blindly because the bottom bar is taller than the top one, which would leave the
+scene sitting a little high.
+
 By default the picture is scaled by a whole number, which keeps every pixel the
 same size, and any leftover room becomes a black border. `F5` switches to a
 scaling that fills the whole screen instead, at the cost of unevenly sized
 pixels. The window can also be resized freely while playing.
+
+The game starts full screen. `Cmd`+`Enter` (macOS) or `Alt`+`Enter` (elsewhere)
+switches between full screen and windowed, and `-w` starts windowed instead.
 
 ### Acknowledgments
 * MaiZure    - for starting the 'lmdave' project this is based on.

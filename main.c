@@ -30,6 +30,11 @@ void usage() {
     printf("-l <level>     start in level \n");
     printf("\n");
     printf("In game, F5 switches between pixel perfect scaling and filling the screen. \n");
+#if defined(__APPLE__)
+    printf("Cmd+Enter switches between full screen and windowed. The game starts in full screen. \n");
+#else
+    printf("Alt+Enter switches between full screen and windowed. The game starts in full screen. \n");
+#endif
 }
 
 int main(int argc, char **argv) {

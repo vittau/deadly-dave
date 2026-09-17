@@ -8,8 +8,17 @@
 /*
  * The game renders into a low resolution framebuffer that is 200 pixels tall,
  * exactly like the original 320x200 DOS screen. The height is fixed because the
- * whole layout depends on it (16 pixels of top bar, 150 of scene, 34 of bottom
- * bar) and the levels are only 11 tiles tall.
+ * whole layout depends on it and the levels are only 11 tiles tall:
+ *
+ *     0                    DISPLAY_TOP_BAR (16)  score, level and lives
+ *     ^                    ^
+ *     | top bar            | DISPLAY_SCENE_TOP (16)
+ *     v                    v
+ *     | scene              | the part the player looks at
+ *     ^                    ^
+ *     | bottom bar         | DISPLAY_SCENE_BOTTOM (166)
+ *     v                    v
+ *     200                  bottom of the bottom bar
  *
  * The width, on the other hand, follows the aspect-ratio of the display so that
  * a wide screen shows more of the level instead of being stretched:
@@ -24,6 +33,16 @@
 #define DISPLAY_BASE_WIDTH   320
 #define DISPLAY_MAX_WIDTH    384
 #define DISPLAY_TILE_SIZE    16
+
+/*
+ * The scene sits between two HUD bars, and the bottom one is taller than the
+ * top one. The picture is shifted down by half of that difference so that the
+ * scene, not the whole framebuffer, is what ends up centered on the screen.
+ */
+#define DISPLAY_TOP_BAR      16
+#define DISPLAY_BOTTOM_BAR   34
+#define DISPLAY_SCENE_TOP    DISPLAY_TOP_BAR
+#define DISPLAY_SCENE_BOTTOM (DISPLAY_HEIGHT - DISPLAY_BOTTOM_BAR)
 
 /* Integer scale factor, crisp pixels, black bars around the image. */
 #define DISPLAY_SCALE_PIXEL_PERFECT 0

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "display.h"
 
@@ -16,26 +17,34 @@ static void check(int condition, const char *what, int out_w, int out_h, int mod
 
 /*
  * Whatever the window size is, the picture must keep the aspect-ratio of the
- * framebuffer, fit inside the window and be centered in it.
+ * framebuffer and fit horizontally, and the scene (the part between the two HUD
+ * bars) must be centered vertically.
  */
 static void check_invariants(int out_w, int out_h, int mode) {
     display_geometry_t g;
     double scale_x;
     double scale_y;
     double drift;
+    double scene_top;
+    double scene_bottom;
 
     g = display_compute_geometry(out_w, out_h, mode);
     scale_x = (double)g.dst.w / (double)g.width;
     scale_y = (double)g.dst.h / (double)g.height;
     drift = (scale_x > scale_y) ? (scale_x - scale_y) : (scale_y - scale_x);
 
+    scene_top = g.dst.y + (DISPLAY_SCENE_TOP * scale_y);
+    scene_bottom = g.dst.y + (DISPLAY_SCENE_BOTTOM * scale_y);
+
     check(g.height == DISPLAY_HEIGHT, "framebuffer height is not 200", out_w, out_h, mode);
     check(g.width >= DISPLAY_BASE_WIDTH && g.width <= DISPLAY_MAX_WIDTH,
         "framebuffer width out of range", out_w, out_h, mode);
     check((g.width % 8) == 0, "framebuffer width is not on the 8 pixel grid", out_w, out_h, mode);
-    check(g.dst.w <= out_w && g.dst.h <= out_h, "picture does not fit in the window", out_w, out_h, mode);
-    check(g.dst.x == (out_w - g.dst.w) / 2 && g.dst.y == (out_h - g.dst.h) / 2,
-        "picture is not centered", out_w, out_h, mode);
+    check(g.dst.w <= out_w, "picture is wider than the window", out_w, out_h, mode);
+    check(g.dst.x == (out_w - g.dst.w) / 2, "picture is not centered horizontally", out_w, out_h, mode);
+    check(scene_top >= -0.5 && scene_bottom <= out_h + 0.5, "scene does not fit in the window", out_w, out_h, mode);
+    check(fabs(((scene_top + scene_bottom) / 2.0) - (out_h / 2.0)) <= 1.0,
+        "scene is not centered", out_w, out_h, mode);
     check(drift < 0.02, "pixels are not square, the picture is stretched", out_w, out_h, mode);
 
     if (mode == DISPLAY_SCALE_PIXEL_PERFECT && out_h >= DISPLAY_HEIGHT) {
