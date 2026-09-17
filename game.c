@@ -785,9 +785,6 @@ static int start_intro(void) {
 
         draw_text_line("BY JOHN ROMERO", 110 + offset, 50);
         draw_text_line("(C) 1990 SOFTDISK, INC.", 79 + offset, 57);
-        draw_text_line("                         ", 72 + offset, 166);
-        draw_text_line("PRESS THE F1 KEY FOR HELP", 72 + offset, 168);
-        draw_text_line("                         ", 72 + offset, 174);
 
         display_unlock();
         display_present();
