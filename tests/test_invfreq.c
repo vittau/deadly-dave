@@ -100,7 +100,8 @@ int main(int argc, char **argv)
     int ret = 0;
 
     memset(raw, 0x00, 4096 * 512);
-    raw_sz = invfreq_decode_soundfx(jumping, raw, 4096 * 512);
+    /* 345 samples per symbol is what the game decodes the jumping sound with. */
+    raw_sz = invfreq_decode_soundfx(jumping, raw, 345);
 
     outfile = fopen("out.raw", "w+");
     ret = fwrite(raw, raw_sz, 1, outfile);
