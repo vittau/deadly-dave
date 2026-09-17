@@ -471,7 +471,7 @@ uint16_t tojetpack[] = {
     0x0438, 0x0528, 0x06CC, 0x0960, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF
 };
 
-void soundfx_play(soundfx_t *sfx, int tune) {
+static void soundfx_play(soundfx_t *sfx, int tune) {
     //printf("[soundfx] soundfx_play tune: %d \n", tune);
 
     /* The callback reads both fields from the audio thread. */
@@ -483,12 +483,12 @@ void soundfx_play(soundfx_t *sfx, int tune) {
     SDL_ResumeAudioStreamDevice(g_audio_stream);
 }
 
-void soundfx_resume(soundfx_t *sfx) {
+static void soundfx_resume(soundfx_t *sfx) {
     //printf("[soundfx] resume \n");
     SDL_ResumeAudioStreamDevice(g_audio_stream);
 }
 
-void soundfx_stop(soundfx_t *sfx) {
+static void soundfx_stop(soundfx_t *sfx) {
     //printf("[soundfx] stop \n");
     SDL_PauseAudioStreamDevice(g_audio_stream);
 }
@@ -502,7 +502,7 @@ void soundfx_stop(soundfx_t *sfx) {
  * silence: the device is deliberately left running, because pausing it from
  * inside the callback would take the device lock this thread already holds.
  */
-void SDLCALL game_audio_callback(void *data, SDL_AudioStream *stream,
+static void SDLCALL game_audio_callback(void *data, SDL_AudioStream *stream,
         int additional_amount, int total_amount) {
     soundfx_t *sfx = (soundfx_t *)data;
     soundfx_tune_t *tune = &sfx->tunes[sfx->tune_idx];

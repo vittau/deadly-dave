@@ -72,7 +72,7 @@ void bullet_destroy(bullet_t *bullet) {
     free(bullet);
 }
 
-bullet_t* bullet_create_internal(int x, int y, int speed) {
+static bullet_t* bullet_create_internal(int x, int y, int speed) {
     bullet_t *bullet = calloc(1, sizeof(bullet_t));
     bullet->speed_x = speed;
     bullet->state = 0;

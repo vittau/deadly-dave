@@ -92,13 +92,13 @@ static int dave_on_ground(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGH
     return 0;
 }
 
-void dave_state_burning_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_burning_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up) {
     dave->state = DAVE_STATE_BURNING;
     dave->ticks_in_state = 0;
 }
 
-void dave_state_standing_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_standing_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
     int key_left, int key_right, int key_up) {
     dave->state = DAVE_STATE_STANDING;
     dave->ticks_in_state = 0;
@@ -106,7 +106,7 @@ void dave_state_standing_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_
         dave->sfx->stop(dave->sfx);
 }
 
-void dave_state_jumping_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_jumping_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up) {
     if (dave->face_direction == DAVE_DIRECTION_FRONTL ||
         dave->face_direction == DAVE_DIRECTION_LEFT) {
@@ -124,7 +124,7 @@ void dave_state_jumping_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_H
     dave->ticks_in_state = 0;
 }
 
-void dave_state_walking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_walking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up) {
     dave->state = DAVE_STATE_WALKING;
 
@@ -170,7 +170,7 @@ void dave_state_walking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_H
     }
 }
 
-void dave_state_jetpacking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_jetpacking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_down, int key_jetpack) {
 
     // Pressing the jetpack key (J) while in 'jetpack-state' will turn it off
@@ -215,7 +215,7 @@ void dave_state_jetpacking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILE
         dave->sfx->play(dave->sfx, TUNE_FLYING);
 }
 
-void dave_state_jetpacking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_jetpacking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up) {
     dave->state = DAVE_STATE_JETPACKING;
     dave->ticks_in_state = 0;
@@ -236,7 +236,7 @@ static void dave_state_climbing_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * T
     dave->ticks_in_state = 0;
 }
 
-void dave_state_freefalling_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_freefalling_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
     int key_left, int key_right, int key_up) {
     dave->state = DAVE_STATE_FREEFALLING;
 
@@ -250,15 +250,15 @@ void dave_state_freefalling_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEM
     }
 }
 
-void dave_state_dead_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
+static void dave_state_dead_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
     dave->ticks_in_state++;
 }
 
-void dave_state_dead_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
+static void dave_state_dead_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
     dave->state = DAVE_STATE_DEAD;
 }
 
-void dave_state_burning_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_burning_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_jetpack) {
     dave->ticks_in_state++;
     if (dave->ticks_in_state >= 200) {
@@ -266,7 +266,7 @@ void dave_state_burning_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP
     }
 }
 
-void dave_state_walking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_walking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_jetpack) {
     if (dave->jump_cooldown_count > 0) {
         dave->jump_cooldown_count--;
@@ -313,7 +313,7 @@ void dave_state_walking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP
 
 }
 
-void dave_state_jumping_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
+static void dave_state_jumping_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_jetpack) {
 
     int jump_velocity_table[95] = {

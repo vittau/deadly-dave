@@ -52,7 +52,7 @@ static const int blended_sprites[] = {
 };
 static uint8_t g_blended[1000];
 
-void render_tile_idx(int tile_idx, int x, int y) {
+static void render_tile_idx(int tile_idx, int x, int y) {
     SDL_Surface *surface = g_assets->imgdata[tile_idx];
 
     if (surface == NULL) {
@@ -104,7 +104,7 @@ void render_tile_idx(int tile_idx, int x, int y) {
     }
 }
 
-void clear_screen(void) {
+static void clear_screen(void) {
     int screen_width = display_width();
 
     for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
@@ -117,7 +117,7 @@ void clear_screen(void) {
  * the level number and the lives sit on: those sprites only add up to 320
  * pixels, so on a wider screen the scene would show through between them.
  */
-void clear_screen_band(int y, int height) {
+static void clear_screen_band(int y, int height) {
     int screen_width = display_width();
 
     if (y < 0) {
@@ -138,7 +138,7 @@ void clear_screen_band(int y, int height) {
  * bottom bars of the HUD are 320 pixels wide but their pattern repeats every 32
  * pixels, so they tile seamlessly over any framebuffer width.
  */
-void render_tile_idx_row(int tile_idx, int y) {
+static void render_tile_idx_row(int tile_idx, int y) {
     SDL_Surface *surface = g_assets->imgdata[tile_idx];
     int screen_width = display_width();
 
@@ -156,7 +156,7 @@ void render_tile_idx_row(int tile_idx, int y) {
  * than the viewport is centered, leaving black on both sides, rather than being
  * pinned to the left edge; a level wider than the viewport scrolls as usual.
  */
-int game_view_x(game_context_t *game) {
+static int game_view_x(game_context_t *game) {
     int screen_width = display_width();
     int level_width = (int)game->level_columns * TILE_SIZE;
 
@@ -166,11 +166,11 @@ int game_view_x(game_context_t *game) {
     return game->scroll_offset * TILE_SIZE;
 }
 
-void draw_tile_offset(tile_t *tile, int view_x) {
+static void draw_tile_offset(tile_t *tile, int view_x) {
     render_tile_idx(tile->get_sprite(tile), tile->x - view_x, tile->y);
 }
 
-void draw_tile(tile_t *tile) {
+static void draw_tile(tile_t *tile) {
     draw_tile_offset(tile, 0);
 }
 
@@ -178,14 +178,14 @@ void draw_tile(tile_t *tile) {
  * Draws a tile whose position was authored for a 320 pixel wide screen, keeping
  * it centered when the framebuffer is wider than that.
  */
-void draw_tile_centered(tile_t *tile) {
+static void draw_tile_centered(tile_t *tile) {
     render_tile_idx(tile->get_sprite(tile), tile->x + display_center_offset(), tile->y);
 }
 
 /* The font tiles follow this order, 100 indices apart for the black set. */
 static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?";
 
-void draw_char(char c, int x, int y, int is_black) {
+static void draw_char(char c, int x, int y, int is_black) {
     const char *letter = memchr(font_chars, c, sizeof(font_chars) - 1);
 
     if (letter != NULL) {
@@ -193,7 +193,7 @@ void draw_char(char c, int x, int y, int is_black) {
     }
 }
 
-void draw_text_line(const char *line, int x, int y) {
+static void draw_text_line(const char *line, int x, int y) {
     size_t length = strlen(line);
 
     for (size_t i = 0; i < length; i++) {
@@ -201,7 +201,7 @@ void draw_text_line(const char *line, int x, int y) {
     }
 }
 
-void draw_text_line_black(const char *line, int x, int y) {
+static void draw_text_line_black(const char *line, int x, int y) {
     size_t length = strlen(line);
 
     for (size_t i = 0; i < length; i++) {
@@ -209,7 +209,7 @@ void draw_text_line_black(const char *line, int x, int y) {
     }
 }
 
-void draw_popup_box(int x, int y, int rows, int columns) {
+static void draw_popup_box(int x, int y, int rows, int columns) {
     // Four corners
     render_tile_idx(SPRITE_IDX_POPUP_BOX_T1, x, y);
     render_tile_idx(SPRITE_IDX_POPUP_BOX_T3, x + ((columns-1) * 8), y);
@@ -236,7 +236,7 @@ void draw_popup_box(int x, int y, int rows, int columns) {
     }
 }
 
-void draw_map(game_context_t *game, tile_t *map) {
+static void draw_map(game_context_t *game, tile_t *map) {
     int view_x = game_view_x(game);
     int first_col = view_x / TILE_SIZE;
     int first;
@@ -263,20 +263,20 @@ void draw_map(game_context_t *game, tile_t *map) {
 }
 
 
-void draw_bullet_offset(bullet_t *bullet, int view_x) {
+static void draw_bullet_offset(bullet_t *bullet, int view_x) {
     if (bullet == NULL) {
         return;
     }
     draw_tile_offset(bullet->tile, view_x);
 }
 
-void draw_dave_offset(dave_t *dave, int view_x) {
+static void draw_dave_offset(dave_t *dave, int view_x) {
     if (dave->tile->get_sprite(dave->tile) != 0) {
         draw_tile_offset(dave->tile, view_x);
     }
 }
 
-void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], int view_x) {
+static void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], int view_x) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
         if (monsters[i] == NULL) {
             continue;
@@ -295,7 +295,7 @@ void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], int view_x) {
     }
 }
 
-void draw_scrollable_area(game_context_t *game, tile_t *map) {
+static void draw_scrollable_area(game_context_t *game, tile_t *map) {
     int view_x = game_view_x(game);
 
     draw_map(game, map);
@@ -304,13 +304,13 @@ void draw_scrollable_area(game_context_t *game, tile_t *map) {
     draw_bullet_offset(game->bullet, view_x);
 }
 
-void draw_x_levels_to_go(int x) {
+static void draw_x_levels_to_go(int x) {
     char good_work[128];
     snprintf(good_work, sizeof(good_work), "GOOD WORK! ONLY %d MORE TO GO!", x);
     draw_text_line(good_work, 50 + display_center_offset(), 58);
 }
 
-void draw_jetpack(int bars) {
+static void draw_jetpack(int bars) {
     if (bars < 0) {
         bars = 0;
     } else if (bars > 900) {
@@ -324,7 +324,7 @@ void draw_jetpack(int bars) {
     }
 }
 
-void draw_level_number(int level) {
+static void draw_level_number(int level) {
     int offset = display_center_offset();
 
     render_tile_idx(136, 104 + offset, 0);
@@ -332,7 +332,7 @@ void draw_level_number(int level) {
     render_tile_idx(148 + level, 184 + offset, 0);
 }
 
-void draw_lives(int lives) {
+static void draw_lives(int lives) {
     int offset = display_right_offset();
     int start_x = 256 + offset;
 
@@ -343,7 +343,7 @@ void draw_lives(int lives) {
     }
 }
 
-void draw_score(int score) {
+static void draw_score(int score) {
     render_tile_idx(137, 0, 0);
     for (int i = 0; i < 5; i++) {
         int mod = score % 10;
@@ -352,7 +352,7 @@ void draw_score(int score) {
     }
 }
 
-void draw_quit_popup(tile_t *flashing_cursor) {
+static void draw_quit_popup(tile_t *flashing_cursor) {
     int offset = display_center_offset();
 
     draw_popup_box(88 + offset, 80, 5, 21);
@@ -362,7 +362,7 @@ void draw_quit_popup(tile_t *flashing_cursor) {
     flashing_cursor->tick(flashing_cursor);
 }
 
-void unload_assets(assets_t *assets) {
+static void unload_assets(assets_t *assets) {
     for (int i = 0; i < 1000; i++) {
         if (assets->imgdata[i] != NULL) {
             SDL_DestroySurface(assets->imgdata[i]);
@@ -437,7 +437,7 @@ static void key_out_black_background(SDL_Surface *surface) {
     free(stack);
 }
 
-int load_assets(void) {
+static int load_assets(void) {
     char fname[64];
     int loaded = 0;
     g_assets = calloc(1, sizeof(struct game_assets));
@@ -488,7 +488,7 @@ int load_assets(void) {
 /*
  * Set game and monster properties to default values
  */
-void init_game(game_context_t *game) {
+static void init_game(game_context_t *game) {
     game->tick = 0;
     game->lives = 4;
     game->score = 0;
@@ -614,7 +614,7 @@ static void gamepad_event(SDL_Event *event, keys_state_t *state) {
     }
 }
 
-void get_keys(keys_state_t* state) {
+static void get_keys(keys_state_t* state) {
     SDL_Event event;
 
     /*
@@ -665,7 +665,7 @@ void get_keys(keys_state_t* state) {
  * Basically this function should return 1 if any keyboard key is pressed, however for now it is only
  * counting known keys
  */
-int is_any_key_pressed(keys_state_t* key_state) {
+static int is_any_key_pressed(keys_state_t* key_state) {
     if (key_state->right || key_state->left || key_state->space || key_state->down || key_state->jump ||
             key_state->fire) {
         return 1;
@@ -677,7 +677,7 @@ int is_any_key_pressed(keys_state_t* key_state) {
  * Shows the intro until the player starts the game. Returns 0 when the player
  * quit or closed the window, so the caller can shut the game down.
  */
-int start_intro(void) {
+static int start_intro(void) {
     int32_t intro_should_finish = 0;
     uint64_t timer_begin;
     uint64_t timer_end;
@@ -801,14 +801,14 @@ int start_intro(void) {
     return 1;
 }
 
-void clear_monsters(game_context_t *game) {
+static void clear_monsters(game_context_t *game) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
         monster_destroy(game->monsters[i]);
         game->monsters[i] = NULL;
     }
 }
 
-void clear_map(tile_t *map) {
+static void clear_map(tile_t *map) {
     for (int i = 0; i < TILEMAP_WIDTH * TILEMAP_HEIGHT; i++) {
         map[i].sprites[0] = 0;
         map[i].sprites[1] = 0;
@@ -818,7 +818,7 @@ void clear_map(tile_t *map) {
     }
 }
 
-int game_warp_popup(game_context_t *game, tile_t *map, keys_state_t *keys) {
+static int game_warp_popup(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (keys->quit || keys->key_y) {
         return G_STATE_QUIT_NOW;
     }
@@ -832,7 +832,7 @@ int game_warp_popup(game_context_t *game, tile_t *map, keys_state_t *keys) {
     return G_STATE_WARP_POPUP;
 }
 
-int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *keys) {
+static int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (keys->quit || keys->key_y) {
         return G_STATE_QUIT_NOW;
     }
@@ -858,7 +858,7 @@ int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *keys) {
  *  |                   .                 .                    |
  *  +-------------------+                 +--------------------+
  */
-int game_adjust_scroll_to_dave(game_context_t *game) {
+static int game_adjust_scroll_to_dave(game_context_t *game) {
     int screen_width = display_width();
     /*
      * Last column the viewport may start at, so that it never scrolls past the
@@ -916,11 +916,11 @@ int game_adjust_scroll_to_dave(game_context_t *game) {
     }
 }
 
-void game_set_scroll_to_dave(game_context_t *game) {
+static void game_set_scroll_to_dave(game_context_t *game) {
     while (game_adjust_scroll_to_dave(game) != 0) {};
 }
 
-void game_do_map(tile_t *map) {
+static void game_do_map(tile_t *map) {
     for (int i = 0; i < TILEMAP_WIDTH * TILEMAP_HEIGHT; i++) {
         if (map[i].sprites[0] != 0) {
             map[i].tick(&map[i]);
@@ -928,7 +928,7 @@ void game_do_map(tile_t *map) {
     }
 }
 
-void game_do_plasmas(game_context_t *game, tile_t *map) {
+static void game_do_plasmas(game_context_t *game, tile_t *map) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
         if (game->monsters[i] != NULL) {
             if (game->monsters[i]->plasma != NULL) {
@@ -950,7 +950,7 @@ void game_do_plasmas(game_context_t *game, tile_t *map) {
     }
 }
 
-void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
+static void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (game->bullet != NULL) {
         /* Same as the plasma: the bullet's range is the original one. */
         int reach = DISPLAY_BASE_WIDTH;
@@ -974,7 +974,7 @@ void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
     }
 }
 
-void draw_level_frame(game_context_t *game) {
+static void draw_level_frame(game_context_t *game) {
     clear_screen_band(0, game->top_separator.y);
     render_tile_idx_row(game->bottom_separator.sprites[0], game->bottom_separator.y);
     render_tile_idx_row(game->top_separator.sprites[0], game->top_separator.y);
@@ -1012,7 +1012,7 @@ void draw_level_frame(game_context_t *game) {
  *                x  x+dx    (x+dx)+(w+dw)     x+w                x  x+dx               x+w  (x+dx)+(w+dw)
  *
  */
-int collision_detect(tile_t *tile1, tile_t *tile2) {
+static int collision_detect(tile_t *tile1, tile_t *tile2) {
     int box1_x = tile1->x + tile1->collision_dx;
     int box1_y = tile1->y + tile1->collision_dy;
     int box1_w = tile1->width + tile1->collision_dw;
@@ -1037,7 +1037,7 @@ int collision_detect(tile_t *tile1, tile_t *tile2) {
  * Game loop routing while user didn't press any key after level started,
  * screen will be same as game_level, however dave will blink and monsters freeze.
  */
-int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *keys) {
+static int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *keys) {
     dave_t *dave = game->dave;
 
     // blinking_timer makes sure:
@@ -1081,14 +1081,14 @@ int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *keys) {
 }
 
 
-int game_level_has_secret(int level) {
+static int game_level_has_secret(int level) {
     if (level == 5) {
         return 1;
     }
     return 0;
 }
 
-int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
+static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     dave_t *dave = game->dave;
     if (keys->quit) {
         return G_STATE_QUIT_NOW;
@@ -1261,7 +1261,7 @@ int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
 }
 
 
-int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
+static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (keys->quit) {
         return G_STATE_QUIT_NOW;
     }
@@ -1319,7 +1319,7 @@ int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     return G_STATE_WARP;
 }
 
-int game_level_load(game_context_t *game, tile_t *map, char *file) {
+static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     int i = 0;
     long fsize;
     char *buf;
@@ -1426,7 +1426,7 @@ static void clear_gameloop(game_context_t *game) {
     bullet_destroy(game->bullet);
 }
 
-int gameloop(int starting_level) {
+static int gameloop(int starting_level) {
     game_context_t* game;
     tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT];
     keys_state_t key_state = {0};

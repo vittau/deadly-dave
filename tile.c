@@ -9,7 +9,7 @@
  * This should be called every tick (game minimal 'clock' beat) to let the tile do
  * their animation.
  */
-void tile_tick(tile_t* tile) {
+static void tile_tick(tile_t* tile) {
     tile->sprite_idx++;
     if (tile->sprites[tile->sprite_idx] == 0) {
         tile->sprite_idx = 0;
@@ -19,11 +19,11 @@ void tile_tick(tile_t* tile) {
 /*
  * Returns the sprite idx to draw
  */
-int tile_get_sprite(tile_t* tile) {
+static int tile_get_sprite(tile_t* tile) {
     return tile->sprites[tile->sprite_idx];
 }
 
-int tile_is_inside(tile_t* tile, int x, int y) {
+static int tile_is_inside(tile_t* tile, int x, int y) {
     if (x >= tile->x && y >= tile->y &&
             x < (tile->x + tile->width) && y < (tile->y + tile->height)) {
         return 1;
@@ -59,7 +59,7 @@ void tile_create_block(tile_t* t, int sprite, int x, int y, int width, int heigh
 /*
  * An infirm block which dave can't stand on nor interact with
  */
-void tile_create_frail(tile_t *t, int sprite, int x, int y, int width, int height) {
+static void tile_create_frail(tile_t *t, int sprite, int x, int y, int width, int height) {
     t->x = x;
     t->y = y;
     t->width = width;
@@ -75,7 +75,7 @@ void tile_create_frail(tile_t *t, int sprite, int x, int y, int width, int heigh
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_door(tile_t* t, int sprite, int x, int y, int width, int height) {
+static void tile_create_door(tile_t* t, int sprite, int x, int y, int width, int height) {
     t->x = x;
     t->y = y;
     t->width = width;
@@ -96,7 +96,7 @@ void tile_create_door(tile_t* t, int sprite, int x, int y, int width, int height
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_gun(tile_t* t, int sprite, int x, int y, int width, int height) {
+static void tile_create_gun(tile_t* t, int sprite, int x, int y, int width, int height) {
     t->x = x;
     t->y = y;
     t->width = width;
@@ -118,7 +118,7 @@ void tile_create_gun(tile_t* t, int sprite, int x, int y, int width, int height)
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_jetpack(tile_t* t, int sprite, int x, int y, int width, int height) {
+static void tile_create_jetpack(tile_t* t, int sprite, int x, int y, int width, int height) {
     t->x = x;
     t->y = y;
     t->width = width;
@@ -247,7 +247,7 @@ void tile_create_intro_fire(tile_t* t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_stars(tile_t *t, int x, int y) {
+static void tile_create_stars(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -267,7 +267,7 @@ void tile_create_stars(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_stars_moon(tile_t *t, int x, int y) {
+static void tile_create_stars_moon(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -288,7 +288,7 @@ void tile_create_stars_moon(tile_t *t, int x, int y) {
 }
 
 
-void tile_create_trunk(tile_t *t, int x, int y) {
+static void tile_create_trunk(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -308,7 +308,7 @@ void tile_create_trunk(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_tree(tile_t* t, int x, int y, int type) {
+static void tile_create_tree(tile_t* t, int x, int y, int type) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -341,7 +341,7 @@ void tile_create_tree(tile_t* t, int x, int y, int type) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_fire(tile_t* t, int x, int y, int idx_offset) {
+static void tile_create_fire(tile_t* t, int x, int y, int idx_offset) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -378,7 +378,7 @@ void tile_create_fire(tile_t* t, int x, int y, int idx_offset) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_vines(tile_t* t, int x, int y, int idx_offset) {
+static void tile_create_vines(tile_t* t, int x, int y, int idx_offset) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -415,7 +415,7 @@ void tile_create_vines(tile_t* t, int x, int y, int idx_offset) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_water(tile_t* t, int x, int y, int idx_offset) {
+static void tile_create_water(tile_t* t, int x, int y, int idx_offset) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -580,7 +580,7 @@ void tile_create_gun_banner(tile_t *t, int x, int y) {
     t->tick = &tile_tick;
 }
 
-void tile_create_purple_gem(tile_t *t, int x, int y) {
+static void tile_create_purple_gem(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -600,7 +600,7 @@ void tile_create_purple_gem(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_teal_gem(tile_t *t, int x, int y) {
+static void tile_create_teal_gem(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -622,7 +622,7 @@ void tile_create_teal_gem(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_red_gem(tile_t *t, int x, int y) {
+static void tile_create_red_gem(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -642,7 +642,7 @@ void tile_create_red_gem(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_ring(tile_t *t, int x, int y) {
+static void tile_create_ring(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -662,7 +662,7 @@ void tile_create_ring(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_crown(tile_t *t, int x, int y) {
+static void tile_create_crown(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -682,7 +682,7 @@ void tile_create_crown(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_scepter(tile_t *t, int x, int y) {
+static void tile_create_scepter(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;
@@ -702,7 +702,7 @@ void tile_create_scepter(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
-void tile_create_grail(tile_t *t, int x, int y) {
+static void tile_create_grail(tile_t *t, int x, int y) {
     t->x = x;
     t->y = y;
     t->width = 16;

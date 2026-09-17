@@ -64,7 +64,7 @@ double invfreq_log(double x) {
     return t + power_adjust;
 }
 
-double invfreq_log2(double x) {
+static double invfreq_log2(double x) {
     return invfreq_log(x)/invfreq_log(2);
 }
 
@@ -76,7 +76,7 @@ double invfreq_sqrt(double x) {
     return invfreq_pow(2, 0.5 * invfreq_log2(x));
 }
 
-double invfreq_fmod(double x, double y)
+static double invfreq_fmod(double x, double y)
 {
     union {double f; uint64_t i;} ux = {x}, uy = {y};
     int ex = ux.i>>52 & 0x7ff;
@@ -205,7 +205,7 @@ double invfreq_sin (double theta)
 }
 
 // Returns frequency value in hz from inverse-frequency format value
-double invfreq_to_freq(uint16_t invfreq) {
+static double invfreq_to_freq(uint16_t invfreq) {
     double invfreq_d = (double)invfreq;
     double frequency = ((double)pc_pit_rate / invfreq_d);
 
@@ -216,7 +216,7 @@ double invfreq_to_freq(uint16_t invfreq) {
  * Approximate a square wave without ringing, originally published by
  * M. Fernández Guasti, in 'Squdel function'.
  */
-double sqd(double x, double freq) {
+static double sqd(double x, double freq) {
     double intensity = 1;
     if (freq >= 6000)
         return invfreq_sin(x);

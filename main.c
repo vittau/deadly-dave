@@ -24,7 +24,7 @@ void sigseg_handler(int sig) {
 }
 #endif
 
-void usage(void) {
+static void usage(void) {
     printf("-w             start windowed \n");
     printf("-l <level>     start in level \n");
     printf("\n");
