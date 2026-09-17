@@ -52,6 +52,28 @@ static const int blended_sprites[] = {
 };
 static uint8_t g_blended[1000];
 
+/*
+ * Paints the parts of the framebuffer outside the centered 320 pixel wide
+ * picture black. The warp corridor is such a picture, and its level data
+ * continues past the right edge of it, so the rest has to be hidden.
+ */
+static void clear_screen_sides(void) {
+    int screen_width = display_width();
+    int left = display_center_offset();
+
+    if (left < 1) {
+        return;
+    }
+
+    for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
+        uint32_t *row = g_pixels + line_idx * g_pixels_pitch;
+
+        SDL_memset4(row, 0x000000FF, (size_t)left);
+        SDL_memset4(row + left + DISPLAY_BASE_WIDTH, 0x000000FF,
+            (size_t)(screen_width - left - DISPLAY_BASE_WIDTH));
+    }
+}
+
 static void render_tile_idx(int tile_idx, int x, int y) {
     SDL_Surface *surface = g_assets->imgdata[tile_idx];
 
@@ -158,7 +180,7 @@ static void render_tile_idx_row(int tile_idx, int y) {
  */
 static int game_view_x(game_context_t *game) {
     int screen_width = display_width();
-    int level_width = (int)game->level_columns * TILE_SIZE;
+    int level_width = (int)game->view_columns * TILE_SIZE;
 
     if (level_width < screen_width) {
         return -((screen_width - level_width) / 2);
@@ -510,6 +532,7 @@ static void init_game(game_context_t *game) {
     game->in_warp = WARP_NONE;
     game->level = 1;
     game->level_columns = TILEMAP_WIDTH;
+    game->view_columns = TILEMAP_WIDTH;
     game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
 
     tile_create_flashing_cursor(&game->flashing_cursor, 224, 96);
@@ -1330,6 +1353,8 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     clear_screen();
     draw_scrollable_area(game, map);
     draw_level_frame(game);
+    /* Only the original 320 pixels of corridor are the picture. */
+    clear_screen_sides();
 
     if (game->in_warp == WARP_DOWN) {
         tile_t warp_label;
@@ -1443,6 +1468,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     free(buf);
 
     game->level_columns = (cur_col > 0 && cur_col <= TILEMAP_WIDTH) ? (uint64_t)cur_col : TILEMAP_WIDTH;
+    game->view_columns = game->level_columns;
 
     return 0;
 }
@@ -1530,6 +1556,8 @@ static int gameloop(int starting_level) {
                 game_level_load(game, map, "res/levels/warp_down.ddt");
                 game->dave->face_direction = DAVE_DIRECTION_FRONT;
             }
+            /* The corridor is the original 320 pixel wide screen, whatever the window. */
+            game->view_columns = DISPLAY_BASE_WIDTH / TILE_SIZE;
             next_state = G_STATE_WARP;
 
         } else if (state == G_STATE_WARP) {

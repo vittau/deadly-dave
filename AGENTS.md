@@ -117,10 +117,13 @@ except the icons.
   and collision code assumes every field starts at zero. Keep it that way
   instead of trusting `malloc`.
 - The warp corridor between levels is authored for the original 320 pixel
-  screen, so `game_warp()` ends the walk at `DISPLAY_BASE_WIDTH - 20` in level
-  coordinates, not at the viewport edge: the level data is wider than 320 and on
-  a wide window the intermission otherwise lasted as long as the whole corridor.
-  Keep that measurement in level coordinates, free of `game_view_x()`.
+  screen, so the warp state lays the view out against that width: it sets
+  `view_columns` (which `game_view_x()` uses instead of the level's own
+  `level_columns`) to 20 and paints the framebuffer outside the centred 320 pixel
+  picture black. The walk itself ends at `DISPLAY_BASE_WIDTH - 20` in level
+  coordinates, not at the viewport edge. Both used to follow the viewport, which
+  made the corridor show its undrawn length and the intermission last as long as
+  the corridor on a wide window.
 - `get_keys()` writes `keys_state.enter` and `.quit` and never clears them, and
   only the intro reads `enter`. Do not use them as edge triggered inside the
   game loop.

@@ -67,6 +67,12 @@ typedef struct game_context_struct {
     uint64_t level;
     /* Number of tile columns the loaded level actually has. */
     uint64_t level_columns;
+    /*
+     * Columns the view is laid out against. It is level_columns for a level, but
+     * the warp corridor is a fixed 320 pixel wide picture, so it stays at
+     * DISPLAY_BASE_WIDTH / TILE_SIZE however wide the window is.
+     */
+    uint64_t view_columns;
 
     uint64_t level_secret_state;
     uint64_t lives;
