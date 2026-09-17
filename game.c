@@ -754,7 +754,6 @@ static int load_assets(void) {
  * Set game and monster properties to default values
  */
 static void init_game(game_context_t *game) {
-    game->tick = 0;
     game->lives = 4;
     game->score = 0;
 
@@ -1853,7 +1852,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                         monsters_count++;
                     }
 
-                    tile_create(&map[cur_col*12 + pos], tag, cur_col * 16, pos*16);
+                    tile_create(&map[cur_col * TILEMAP_HEIGHT + pos], tag, cur_col * 16, pos*16);
                     pos++;
                 } else {
                     free(buf);
@@ -1862,7 +1861,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
             } else if (map_str[i] == ';') {
                 if (collected_count == 3) {
                     collected_count = 0;
-                    tile_create(&map[cur_col*12 + pos], tag, cur_col*16, pos*16);
+                    tile_create(&map[cur_col * TILEMAP_HEIGHT + pos], tag, cur_col*16, pos*16);
                     cur_col++;
                     pos = 0;
                 } else {
@@ -1879,7 +1878,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                  */
                 if (collected_count == 3) {
                     collected_count = 0;
-                    tile_create(&map[cur_col*12 + pos], tag, cur_col*16, pos*16);
+                    tile_create(&map[cur_col * TILEMAP_HEIGHT + pos], tag, cur_col*16, pos*16);
                     cur_col++;
                     pos = 0;
                 }

@@ -11,12 +11,12 @@ SDL_AudioStream *g_audio_stream;
 
 // SPEED TOJETPACK: 0x0A
 // SPEED HITWALL: 0x0A
-uint16_t silence[] = {
+static const uint16_t silence[] = {
     0x0000, 0xFFFF
 };
 
 // SPEED: 0x0F
-uint16_t got_trophy[] = {
+static const uint16_t got_trophy[] = {
     0x0BF4, 0x0BF4, 0x0BF4, 0x0BF4, 0x0BB8, 0x0BB8, 0x0B7C, 0x0B7C,
     0x0B40, 0x0B40, 0x0B40, 0x0B04, 0x0B04, 0x0B04, 0x0B04, 0x0AC8,
     0x0AC8, 0x0AC8, 0x0AC8, 0x0AC8, 0x0AC8, 0x0B04, 0x0B04, 0x0B04,
@@ -52,7 +52,7 @@ uint16_t got_trophy[] = {
 };
 
 // SPEED: 0x0F
-uint16_t treasure[] = {
+static const uint16_t treasure[] = {
     0x0528, 0x04B0, 0x0438, 0x0438, 0x03FC, 0x0438, 0x0474, 0x0474,
     0x04B0, 0x04B0, 0x0528, 0x05A0, 0x0618, 0x05A0, 0x04EC, 0x0438,
     0x0348, 0x030C, 0x02D0, 0x02D0, 0x02D0, 0x02D0, 0x02D0, 0x02D0,
@@ -60,7 +60,7 @@ uint16_t treasure[] = {
 };
 
 // SPEED: 0x0F
-uint16_t nextlevel[] = {
+static const uint16_t nextlevel[] = {
     0x2670, 0x2670, 0x2634, 0x2634, 0x25F8, 0x25F8, 0x25BC, 0x25BC,
     0x2580, 0x2580, 0x2544, 0x2508, 0x24CC, 0x24CC, 0x2454, 0x2454,
     0x23DC, 0x23DC, 0x2364, 0x2328, 0x22B0, 0x2274, 0x2238, 0x21FC,
@@ -274,12 +274,12 @@ uint16_t nextlevel[] = {
 };
 
 // SPEED: 0x05
-uint16_t walking[] = {
+static const uint16_t walking[] = {
     0x1AF4, 0x0000,0xFFFF
 };
 
 // SPEED: 0x0A
-uint16_t flying[] = {
+static const uint16_t flying[] = {
     0x20D0, 0xFFFF
 };
 
@@ -289,7 +289,7 @@ uint16_t flying[] = {
 // 3 = 1064
 // 4 = 1372/1384
 // 6 = 2056
-uint16_t jumping[] = {
+static const uint16_t jumping[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0B7C, 0x0000, 0x0000, 0x0000,
     0x0000, 0x099C, 0x0000, 0x0000, 0x0000, 0x0834, 0x0000, 0x0000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0564, 0x0000, 0x04EC, 0x0000,
@@ -337,7 +337,7 @@ uint16_t jumping[] = {
 // 3 = 310
 // 2 = 260
 // SPEED: 0x19
-uint16_t got_something[] = {
+static const uint16_t got_something[] = {
     0x1E00, 0x1D10, 0x1C5C, 0x1B6C, 0x1A7C, 0x1A40, 0x198C, 0x189C,
     0x17AC, 0x16F8, 0x15CC, 0x1590, 0x14DC, 0x1464, 0x13EC, 0x13B0,
     0x1338, 0x12FC, 0x12C0, 0x1284, 0x120C, 0x11D0, 0x11D0, 0x11D0,
@@ -369,7 +369,7 @@ uint16_t got_something[] = {
 
 
 // SPEED: 0x10
-uint16_t explosion[] = {
+static const uint16_t explosion[] = {
     0x13B0, 0x189C, 0x15CC, 0x0000, 0x0000, 0x11D0, 0x0F78, 0x1B30,
     0x0000, 0x12C0, 0x0870, 0x13EC, 0x17E8, 0x0000, 0x16F8, 0x111C,
     0x10A4, 0x0000, 0x102C, 0x1CD4, 0x0000, 0x1464, 0x102C, 0x1A40,
@@ -406,7 +406,7 @@ uint16_t explosion[] = {
 };
 
 // SPEED: 0x0C
-uint16_t ouch[] = {
+static const uint16_t ouch[] = {
     0x2580, 0x22EC, 0x2058, 0x1F68, 0x1D10, 0x1BE4, 0x189C, 0x16F8,
     0x1608, 0x1590, 0x1338, 0x111C, 0x1068, 0x0F00, 0x0E4C, 0x0D5C,
     0x0CA8, 0x0BB8, 0x0B04, 0x0A50, 0x099C, 0x08E8, 0x0870, 0x0834,
@@ -419,7 +419,7 @@ uint16_t ouch[] = {
     0x23A0, 0x25BC, 0x2634, 0x26AC, 0x2760, 0x2760, 0xFFFF, 0xFFFF
 };
 // SPEED: 0x0A
-uint16_t falling[] = {
+static const uint16_t falling[] = {
     0x01E0, 0x01E0, 0x0000, 0x0000, 0x021C, 0x0000, 0x0000, 0x0258,
     0x0000, 0x0000, 0x0294, 0x0000, 0x0000, 0x0000, 0x02D0, 0x0000,
     0x0000, 0x0000, 0x02D0, 0x0000, 0x0000, 0x0000, 0x030C, 0x0000,
@@ -462,7 +462,7 @@ uint16_t falling[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x21C0, 0xFFFF, 0xFFFF
 };
 
-uint16_t tojetpack[] = {
+static const uint16_t tojetpack[] = {
     0x05DC, 0x0564, 0x04EC, 0x099C, 0x07F8, 0x0438, 0x099C, 0x17E8,
     0x03C0, 0x14DC, 0x099C, 0x0A50, 0x0348, 0x0A14, 0x0AC8, 0x02D0,
     0x0F00, 0x0294, 0x1BE4, 0x0258, 0x0FF0, 0x021C, 0x0528, 0x01E0,
@@ -529,67 +529,73 @@ static void SDLCALL game_audio_callback(void *data, SDL_AudioStream *stream,
     sfx->tune_offset += amount;
 }
 
+/*
+ * The decoded byte count is exact, so a tune buffer only ever holds what the
+ * decoder writes: one 16 bit sample per sample slot, and every symbol of the
+ * table (up to the 0xFFFF terminator) expands to samples_per_symbol slots,
+ * whether it carries a frequency or a silent gap.
+ */
+static size_t tune_decoded_size(const uint16_t *data, int samples_per_symbol) {
+    size_t symbols = 0;
+
+    while (data[symbols] != 0xFFFF) {
+        symbols++;
+    }
+    return symbols * (size_t)samples_per_symbol * sizeof(uint16_t);
+}
+
+/* One source per tune, in TUNE_* order; climbing is the walking table at 440. */
+typedef struct tune_source_struct {
+    const uint16_t *data;
+    int samples_per_symbol;
+} tune_source_t;
+
+static const tune_source_t tune_sources[TUNE_COUNT] = {
+    { silence,       240 }, /* TUNE_SILENCE       */
+    { got_trophy,    162 }, /* TUNE_GOT_TROPHY    */
+    { treasure,      162 }, /* TUNE_TREASURE      */
+    { nextlevel,     162 }, /* TUNE_NEXTLEVEL     */
+    { walking,       440 }, /* TUNE_WALKING       */
+    { jumping,       345 }, /* TUNE_JUMPING       */
+    { got_something, 162 }, /* TUNE_GOT_SOMETHING */
+    { explosion,     240 }, /* TUNE_EXPLOSION     */
+    { ouch,          240 }, /* TUNE_OUCH          */
+    { flying,        240 }, /* TUNE_FLYING        */
+    { falling,       240 }, /* TUNE_FALLING       */
+    { tojetpack,     240 }, /* TUNE_TOJETPACK     */
+    { walking,       440 }, /* TUNE_CLIMBING      */
+};
+
+static void soundfx_free_tunes(soundfx_t *sfx) {
+    for (int i = 0; i < TUNE_COUNT; i++) {
+        free(sfx->tunes[i].raw);
+        sfx->tunes[i].raw = NULL;
+    }
+}
+
 soundfx_t* soundfx_create(void) {
-    soundfx_t *sfx = malloc(sizeof(soundfx_t));
+    soundfx_t *sfx = calloc(1, sizeof(soundfx_t));
     SDL_AudioSpec audio_spec;
 
-    strcpy(sfx->tunes[0].name, "silence");
-    sfx->tunes[0].raw = malloc(4096 * 512);
-    memset(sfx->tunes[0].raw, 0x00, 4096 * 512);
-    sfx->tunes[0].sz = invfreq_decode_soundfx(silence, sfx->tunes[0].raw, 240);
+    if (sfx == NULL) {
+        printf("Failed to allocate the sound effects. \n");
+        return NULL;
+    }
 
-    strcpy(sfx->tunes[1].name, "got_trophy");
-    sfx->tunes[1].raw = malloc(4096 * 512);
-    sfx->tunes[1].sz = invfreq_decode_soundfx(got_trophy, sfx->tunes[1].raw, 162);
+    for (int i = 0; i < TUNE_COUNT; i++) {
+        size_t bytes = tune_decoded_size(tune_sources[i].data,
+            tune_sources[i].samples_per_symbol);
 
-    strcpy(sfx->tunes[2].name, "treasure");
-    sfx->tunes[2].raw = malloc(4096 * 512);
-    sfx->tunes[2].sz = invfreq_decode_soundfx(treasure, sfx->tunes[2].raw, 162);
-
-    strcpy(sfx->tunes[3].name, "nextlevel");
-    sfx->tunes[3].raw = malloc(4096 * 512);
-    sfx->tunes[3].sz = invfreq_decode_soundfx(nextlevel, sfx->tunes[3].raw, 162);
-
-    strcpy(sfx->tunes[4].name, "walking");
-    sfx->tunes[4].raw = malloc(4096 * 512);
-    sfx->tunes[4].sz = invfreq_decode_soundfx(walking, sfx->tunes[4].raw, 440);
-
-    strcpy(sfx->tunes[5].name, "jumping");
-    sfx->tunes[5].raw = malloc(4096 * 512);
-    sfx->tunes[5].sz = invfreq_decode_soundfx(jumping, sfx->tunes[5].raw, 345);
-
-    strcpy(sfx->tunes[6].name, "got_something");
-    sfx->tunes[6].raw = malloc(4096 * 512);
-    sfx->tunes[6].sz = invfreq_decode_soundfx(got_something, sfx->tunes[6].raw, 162);
-
-    strcpy(sfx->tunes[7].name, "explosion");
-    sfx->tunes[7].raw = malloc(4096 * 512);
-    memset(sfx->tunes[7].raw, 0x00, 4096 * 512);
-    sfx->tunes[7].sz = invfreq_decode_soundfx(explosion, sfx->tunes[7].raw, 240);
-
-    strcpy(sfx->tunes[8].name, "ouch");
-    sfx->tunes[8].raw = malloc(4096 * 512);
-    memset(sfx->tunes[8].raw, 0x00, 4096 * 512);
-    sfx->tunes[8].sz = invfreq_decode_soundfx(ouch, sfx->tunes[8].raw, 240);
-
-    strcpy(sfx->tunes[9].name, "flying");
-    sfx->tunes[9].raw = malloc(4096 * 512);
-    memset(sfx->tunes[9].raw, 0x00, 4096 * 512);
-    sfx->tunes[9].sz = invfreq_decode_soundfx(flying, sfx->tunes[9].raw, 240);
-
-    strcpy(sfx->tunes[10].name, "falling");
-    sfx->tunes[10].raw = malloc(4096 * 512);
-    memset(sfx->tunes[10].raw, 0x00, 4096 * 512);
-    sfx->tunes[10].sz = invfreq_decode_soundfx(falling, sfx->tunes[10].raw, 240);
-
-    strcpy(sfx->tunes[11].name, "tojetpack");
-    sfx->tunes[11].raw = malloc(4096 * 512);
-    memset(sfx->tunes[11].raw, 0x00, 4096 * 512);
-    sfx->tunes[11].sz = invfreq_decode_soundfx(tojetpack, sfx->tunes[11].raw, 240);
-
-    strcpy(sfx->tunes[12].name, "climbing");
-    sfx->tunes[12].raw = malloc(4096 * 512);
-    sfx->tunes[12].sz = invfreq_decode_soundfx(walking, sfx->tunes[12].raw, 440);
+        sfx->tunes[i].raw = malloc(bytes);
+        if (sfx->tunes[i].raw == NULL) {
+            printf("Failed to allocate sound tune %d. \n", i);
+            soundfx_free_tunes(sfx);
+            free(sfx);
+            return NULL;
+        }
+        sfx->tunes[i].sz = invfreq_decode_soundfx(tune_sources[i].data,
+            sfx->tunes[i].raw, tune_sources[i].samples_per_symbol);
+    }
 
     sfx->tune_idx = 0;
     sfx->tune_offset = 0;
@@ -610,6 +616,8 @@ soundfx_t* soundfx_create(void) {
             &audio_spec, &game_audio_callback, (void*)sfx);
     if (g_audio_stream == NULL) {
         printf("Failed to open audio device. Error: (%s) \n", SDL_GetError());
+        soundfx_free_tunes(sfx);
+        free(sfx);
         return NULL;
     }
 
@@ -618,22 +626,14 @@ soundfx_t* soundfx_create(void) {
 
 void soundfx_destroy(soundfx_t *sfx)
 {
+    if (sfx == NULL) {
+        return;
+    }
+
     /* Closes the device first, so the callback can no longer read what follows. */
     SDL_DestroyAudioStream(g_audio_stream);
     g_audio_stream = NULL;
 
-    free(sfx->tunes[0].raw);
-    free(sfx->tunes[1].raw);
-    free(sfx->tunes[2].raw);
-    free(sfx->tunes[3].raw);
-    free(sfx->tunes[4].raw);
-    free(sfx->tunes[5].raw);
-    free(sfx->tunes[6].raw);
-    free(sfx->tunes[7].raw);
-    free(sfx->tunes[8].raw);
-    free(sfx->tunes[9].raw);
-    free(sfx->tunes[10].raw);
-    free(sfx->tunes[11].raw);
-    free(sfx->tunes[12].raw);
+    soundfx_free_tunes(sfx);
     free(sfx);
 }

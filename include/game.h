@@ -52,7 +52,6 @@ typedef struct keys_state_struct {
 } keys_state_t;
 
 typedef struct game_context_struct {
-    uint8_t tick;
     uint8_t blinking_timer;
 
     dave_t *dave;

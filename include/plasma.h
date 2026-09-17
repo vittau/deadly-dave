@@ -3,8 +3,6 @@
 
 #include "tile.h"
 
-#define PLASMA_STATE_FLYING_RIGHT 1
-#define PLASMA_STATE_FLYING_LEFT  2
 #define PLASMA_STATE_DEAD         3
 
 typedef struct plasma_struct {

@@ -6,17 +6,9 @@
 
 #include "invfreq.h"
 
-int16_t engine_currSoundPlaying;
-uint8_t sound_limiter, *sndPriorities;
-uint32_t pc_pit_rate = 1193180;
-const uint32_t pitAltCounter = 0x2000;
+static uint32_t pc_pit_rate = 1193180;
 
-typedef struct invfreq_block_struct {
-    uint16_t pcm[4096];
-    size_t len;
-} invfreq_block_t;
-
-double invfreq_exp(double x) {
+static double invfreq_exp(double x) {
     double ret = 1, nom = 1, fac = 1;
     int i;
     for (i = 0; i < 64; i++) {
@@ -31,7 +23,7 @@ double invfreq_exp(double x) {
 /*
  * Taylor series impl. of log
  */
-double invfreq_log(double x) {
+static double invfreq_log(double x) {
     double euler_c = 2.718281828459045235;
     // Trap illegal values
     if (x <= 0) {
@@ -68,11 +60,11 @@ static double invfreq_log2(double x) {
     return invfreq_log(x)/invfreq_log(2);
 }
 
-double invfreq_pow(double x, double a) {
+static double invfreq_pow(double x, double a) {
     return invfreq_exp(a * invfreq_log(x));
 }
 
-double invfreq_sqrt(double x) {
+static double invfreq_sqrt(double x) {
     return invfreq_pow(2, 0.5 * invfreq_log2(x));
 }
 
@@ -143,7 +135,7 @@ static double invfreq_fmod(double x, double y)
     return ux.f;
 }
 
-double invfreq_sin (double theta)
+static double invfreq_sin (double theta)
 {
     int n;
     double sx;
@@ -230,7 +222,7 @@ static double sqd(double x, double freq) {
     return invfreq_sin(x) / invfreq_sqrt((invfreq_sin(x) * invfreq_sin(x)) + intensity);
 }
 
-size_t invfreq_decode_soundfx(uint16_t *data, uint8_t *out, int samples_per_symbol) {
+size_t invfreq_decode_soundfx(const uint16_t *data, uint8_t *out, int samples_per_symbol) {
     int idx = 0;
     double freq = 0.0, fs = 44100;
     double pi = 3.14159265358979323846;

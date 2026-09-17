@@ -73,7 +73,6 @@ plasma_t* plasma_create_left(int x, int y) {
     plasma_t *plasma = calloc(1, sizeof(plasma_t));
 
     plasma->speed_x = -2;
-    plasma->state = PLASMA_STATE_FLYING_LEFT;
     plasma->spawn_x = x;
     plasma->get_sprite = &plasma_get_sprite;
     plasma->tick = &plasma_tick;
@@ -89,7 +88,6 @@ plasma_t* plasma_create_right(int x, int y) {
     plasma_t *plasma = calloc(1, sizeof(plasma_t));
 
     plasma->speed_x = 2;
-    plasma->state = PLASMA_STATE_FLYING_RIGHT;
     plasma->spawn_x = x;
     plasma->get_sprite = &plasma_get_sprite;
     plasma->tick = &plasma_tick;

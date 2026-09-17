@@ -26,7 +26,6 @@ typedef struct monster_struct {
     plasma_t *plasma;
 
     void (*tick)(struct monster_struct *monster, int dave_x);
-    int (*is_dead)(struct monster_struct *monster);
     int (*is_alive)(struct monster_struct *monster);
 } monster_t;
 

@@ -18,16 +18,15 @@
 #define TUNE_FALLING        10
 #define TUNE_TOJETPACK      11
 #define TUNE_CLIMBING      12
+#define TUNE_COUNT         13
 
 typedef struct soundfx_tune_struct {
-    char name[64];
     uint8_t *raw;
     uint64_t sz;
-
 } soundfx_tune_t;
 
 typedef struct soundfx_struct {
-    soundfx_tune_t tunes[13];
+    soundfx_tune_t tunes[TUNE_COUNT];
     int tune_idx;
     int tune_offset;
 

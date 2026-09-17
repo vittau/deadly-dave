@@ -9,7 +9,12 @@
  */
 #define TILE_SIZE 16
 #define TILEMAP_WIDTH 100
-#define TILEMAP_HEIGHT 12
+/*
+ * Rows per level column. A .ddt line carries 11 tags: the leading one is the
+ * row that hides behind the top HUD bar, so the last row index the parser can
+ * reach is 10 and a 100x11 chunk is the whole level.
+ */
+#define TILEMAP_HEIGHT 11
 
 /*
  * Modifiers of tiles, sort of logical category/characteristic.
@@ -208,7 +213,12 @@ typedef struct tile_struct {
     int collision_dh;
 
     int mod;
-    int sprites[100];
+    /*
+     * Animation frames, terminated by a 0. The longest list the game builds is
+     * 51 entries (the trophy glow writes up to sprites[49] plus the terminator
+     * at [50]), so 51 is the whole of it.
+     */
+    int sprites[51];
     int sprite_idx;
     int score_value;
 
