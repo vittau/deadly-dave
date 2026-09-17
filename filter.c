@@ -17,9 +17,16 @@
 /*
  * Scanline strength: the dark band keeps 1/2 of its value at most. The dimming
  * is weighted by luminance, as in CannonBall: a bright beam blooms into the gap
- * next to it and is left almost untouched, while a dark pixel is cut the most.
+ * next to it and is dimmed the least, while a dark pixel is cut the most.
  */
 #define SCANLINE_SHIFT 1
+
+/*
+ * The luminance weight saturates here instead of at full brightness, so even
+ * white keeps a faint trace of the scanline. Without it a bright pixel is left
+ * completely untouched and the effect disappears over the lighter artwork.
+ */
+#define SCANLINE_MAX_LUM 216
 
 /*
  * Scanlines are half a game row tall, the way a 320x200 picture would look on a
@@ -107,6 +114,10 @@ static uint32_t scanline_pixel(uint32_t p, uint32_t w) {
     uint32_t nr = r >> SCANLINE_SHIFT;
     uint32_t ng = g >> SCANLINE_SHIFT;
     uint32_t nb = b >> SCANLINE_SHIFT;
+
+    if (lum > SCANLINE_MAX_LUM) {
+        lum = SCANLINE_MAX_LUM;
+    }
 
     nr = (nr * (255 - lum) + r * lum) >> 8;
     ng = (ng * (255 - lum) + g * lum) >> 8;

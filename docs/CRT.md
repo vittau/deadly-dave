@@ -166,10 +166,13 @@ CannonBall implements it as follows (`rendersurface.cpp`):
   mask.
 
 Deadly Dave keeps the luminance weighting, the `shift = 1` and the preserved
-alpha, but makes the bands **half a game row** tall: a 320x200 picture is
-filtered as if it were shown on a 640x400 screen, with two bands per source row
-instead of one dark row per two. That is the partial-coverage case above, taken
-to the destination's own resolution:
+alpha, with two changes. The luminance weight **saturates below full
+brightness** (`SCANLINE_MAX_LUM`), because CannonBall's "not dimmed at all"
+makes the lines disappear over the game's lighter artwork, and a faint trace
+over white reads better. And the bands are **half a game row** tall: a 320x200
+picture is filtered as if it were shown on a 640x400 screen, with two bands per
+source row instead of one dark row per two. That is the partial-coverage case
+above, taken to the destination's own resolution:
 
 - The dark half of a source row is its lower half. An output row that lands
   wholly inside it is dimmed, one that lands wholly outside is untouched, and

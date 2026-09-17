@@ -52,6 +52,7 @@ static void check_output_height(void) {
  */
 static void check_scanline_pattern(void) {
     uint32_t src[2] = { 0x808080FFu, 0x808080FFu };
+    uint32_t white[2] = { 0xFFFFFFFFu, 0xFFFFFFFFu };
     uint32_t dst[6];
     const uint32_t bright = 0x808080FFu;
     const uint32_t half = 0x6F6F6FFF;   /* (95 + 128) / 2 */
@@ -74,6 +75,15 @@ static void check_scanline_pattern(void) {
         expect_pixel("3x second row straddles", dst[i * 3 + 1], half);
         expect_pixel("3x third row is dark", dst[i * 3 + 2], dark);
     }
+
+    /*
+     * White saturates the luminance weight, but the dark band must still be a
+     * little darker so the effect does not vanish over the bright artwork.
+     */
+    memset(dst, 0, sizeof(dst));
+    filter_render(white, 1, 1, dst, 1, 2, 4);
+    expect_pixel("white stays bright", dst[0], 0xFFFFFFFFu);
+    expect_pixel("white is still dimmed a little", dst[1], 0xEAEAEAFFu);
 }
 
 int main(void) {

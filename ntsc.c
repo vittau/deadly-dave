@@ -30,10 +30,12 @@
 #define NTSC_EXT_DECODER_HUE (NTSC_STD_DECODER_HUE + 15)
 
 /*
- * Half the normal range, so a doubled (hi-res style) pixel has headroom and
- * the packed channels fit one extra sign bit for the clamp trick.
+ * Full 8-bit range per channel, which is what the original library uses. The
+ * CannonBall-SE variant halves it (7 bits) to leave headroom for its doubled
+ * hi-res pixels, and relies on a brightness-boost shader to bring the picture
+ * back; this port has no such shader, so half range just renders the game dark.
  */
-#define NTSC_RGB_BITS   7
+#define NTSC_RGB_BITS   8
 #define NTSC_GAMMA_SIZE 256
 
 #define NTSC_ENTRY_SIZE   128
@@ -436,7 +438,7 @@ int ntsc_output_width(int in_width) {
     uint32_t ntsc_raw = \
         kernel0[x] + kernel1[(x + 12) % 7 + 14] + kernel2[(x + 10) % 7 + 28] + \
         kernelx0[(x + 7) % 14] + kernelx1[(x + 5) % 7 + 21] + kernelx2[(x + 3) % 7 + 35]; \
-    NTSC_CLAMP_(ntsc_raw, 1); \
+    NTSC_CLAMP_(ntsc_raw, 8 - NTSC_RGB_BITS); \
     NTSC_RGB_OUT_(rgb_out, ntsc_raw, alevel); \
 }
 
