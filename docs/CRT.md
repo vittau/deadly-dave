@@ -243,8 +243,8 @@ FILTERS: OFF  ->  SCANLINES  ->  NTSC  ->  BOTH  ->  OFF
 - `NTSC` is the Blargg composite preset.
 - `BOTH` is NTSC followed by scanlines on the result.
 
-Like the other pause-menu rows (V-SYNC, FPS LIMIT, MODE), the choice is a
-runtime setting and is not written to disk.
+Like the other pause-menu rows (V-SYNC, FPS LIMIT, MODE, SCALING), the choice is
+kept between runs in the settings file (see `config.c`).
 
 ---
 

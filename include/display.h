@@ -70,7 +70,13 @@ void display_quit(void);
  * drawn into the frame.
  */
 void display_sync(void);
-void display_toggle_scale_mode(void);
+/*
+ * The SCALING row's setting. display_init() takes the mode it starts on and
+ * this changes it afterwards; the new mode is picked up by the next
+ * display_sync(), which runs at the top of the frame.
+ */
+void display_set_scale_mode(int mode);
+int  display_scale_mode(void);
 /* Turns vertical sync on the renderer on or off, for the pause menu's V-SYNC option. */
 void display_set_vsync(int enabled);
 

@@ -21,18 +21,22 @@ emulator and without anything to install.
   of stretching the picture, so a wide screen shows more of the level rather
   than a flattened one. A level narrower than the viewport is centred, with
   black on the sides, and everything is scaled by whole numbers so the pixels
-  stay square and sharp. `F5` switches to a mode that fills the whole screen,
-  and the window can be resized to whatever you like. The screenshot above is
-  level 2 in full, on a screen wide enough to hold it.
+  stay square and sharp. `F5` (or the pause menu's `SCALING` row) switches to a
+  mode that fills the whole screen, and the window can be resized to whatever
+  you like. The screenshot above is level 2 in full, on a screen wide enough to
+  hold it.
 - **Keyboard or controller, together.** The keyboard keeps the feel of the
   original; a controller works out of the box and can be plugged in while
   playing.
 - **A pause menu with the settings that matter.** `Escape` (or `Start`) opens it
   while playing or in a warp corridor: `V-SYNC` on/off, an `FPS LIMIT` of
   30/60/120/refresh/unlimited, the `MODE` (full screen or windowed), the
-  `FILTERS` row and a `WARP` row that jumps straight to any level. `Up`/`Down`
-  moves, `Enter`/`Space` applies, `Escape` closes. The settings are per run and
-  are not saved.
+  `SCALING` (pixel perfect or stretched to fit), the `FILTERS` row and a `WARP`
+  row that jumps straight to any level. `Up`/`Down`
+  moves, `Enter`/`Space` applies, `Escape` closes. Everything but `WARP` is kept
+  between runs, in a `config.ini` in the system's per-user application folder
+  (the game writes nothing next to itself, so an installed app is never
+  touched). Deleting that file goes back to the defaults.
 - **CRT filters.** The `FILTERS` row cycles the looks the game can be drawn
   with: plain, scanlines, the Blargg NTSC composite filter (colour bleeding and
   rainbow fringing), or both. The NTSC palette table is built the first time it
@@ -42,8 +46,10 @@ emulator and without anything to install.
   perfect with no stretch and nothing is cut off. The built-in controls are
   picked up as a gamepad (the title screen and the pause menu included), so it
   plays the same in Gaming Mode, added as a non-Steam game, as on a desktop.
-- **Starts full screen.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere else,
-  switches between full screen and windowed. `-w` starts windowed instead, and
+- **Opens the way you left it.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere
+  else, switches between full screen and windowed; that choice, like the pause
+  menu's, is remembered for the next run, and a first run starts full screen.
+  `-w` starts windowed for that one run without changing what is saved, and
   `-l <level>` starts on a given level.
 - **The whole game**, all ten levels and all four bonus warp zones, each one the
   full original map, with the intro, the ending screen and the original sound

@@ -14,7 +14,8 @@
  *                     which adds colour bleeding and rainbow fringing.
  *   FILTER_BOTH       NTSC first, then scanlines over its output.
  *
- * The mode is a runtime setting (the pause menu's FILTERS row); the NTSC
+ * The mode is the pause menu's FILTERS row, persisted like the other rows (see
+ * config.h), so it is set before display_init() builds the texture. The NTSC
  * palette table is built lazily the first time NTSC is enabled and then kept,
  * so toggling it later is instant.
  */

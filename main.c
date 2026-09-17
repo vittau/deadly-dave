@@ -31,11 +31,11 @@ static void usage(void) {
     printf("Move with WASD (W jumps, S climbs down), the arrow keys work too. \n");
     printf("Space shoots, J is the jetpack. \n");
     printf("On a controller: stick or D-pad moves, A jumps, B is the jetpack, X shoots, Start is Escape. \n");
-    printf("In game, F5 switches between pixel perfect scaling and filling the screen. \n");
+    printf("In game, F5 (or the pause menu's SCALING row) switches between pixel perfect scaling and filling the screen. \n");
 #if defined(__APPLE__)
-    printf("Cmd+Enter switches between full screen and windowed. The game starts in full screen. \n");
+    printf("Cmd+Enter switches between full screen and windowed. The game opens the way you left it. \n");
 #else
-    printf("Alt+Enter switches between full screen and windowed. The game starts in full screen. \n");
+    printf("Alt+Enter switches between full screen and windowed. The game opens the way you left it. \n");
 #endif
 }
 

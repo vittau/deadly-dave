@@ -7,7 +7,10 @@ LDFLAGS += `pkg-config --libs sdl3`
 LDFLAGS += -lm
 INCS = -I ../include/
 
-all: test_invfreq test_monster test_display test_filter
+all: test_config test_invfreq test_monster test_display test_filter
+
+test_config: test_config.c ../config.c
+	$(CC) test_config.c ../config.c $(INCS) $(CFLAGS) -o test_config $(LDFLAGS)
 
 test_invfreq: test_invfreq.c ../invfreq.c
 	$(CC) test_invfreq.c ../invfreq.c $(INCS) $(CFLAGS) -o test_invfreq $(LDFLAGS)
@@ -22,4 +25,4 @@ test_filter: test_filter.c ../filter.c ../ntsc.c
 	$(CC) test_filter.c ../filter.c ../ntsc.c $(INCS) $(CFLAGS) -o test_filter $(LDFLAGS)
 
 clean:
-	rm -f test_invfreq test_monster test_display test_filter
+	rm -f test_config test_invfreq test_monster test_display test_filter

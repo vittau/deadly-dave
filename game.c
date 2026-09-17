@@ -18,6 +18,7 @@
 #include <SDL3/SDL_main.h>
 
 #include "game.h"
+#include "config.h"
 #include "display.h"
 #include "filter.h"
 #include "soundfx.h"
@@ -32,18 +33,25 @@ soundfx_t *g_soundfx;
 SDL_Gamepad *g_gamepad;
 
 /*
- * Pause menu settings. Not persisted: every run starts back on the same
- * defaults the game always ran with - vsync on and the frame paced to the
- * display's own refresh rate.
+ * Pause menu settings. They are read from the settings file on startup and
+ * written back every time one of them changes (see config.c). What is here is
+ * what a first run, or a deleted config.ini, gets: vsync on and the frame
+ * paced to the display's own refresh rate, like the game always ran.
  */
-static int g_vsync_enabled = 1;
-#define FPS_LIMIT_REFRESH_INDEX   3
-#define FPS_LIMIT_UNLIMITED_INDEX 4
-#define FPS_LIMIT_COUNT           5
+static config_t g_config = {
+    1,                        /* V-SYNC: on */
+    FPS_LIMIT_REFRESH_INDEX,  /* FPS LIMIT: one refresh of the screen the window is on */
+    FILTER_OFF,               /* FILTERS: plain picture */
+    1,                        /* MODE: full screen */
+    DISPLAY_SCALE_PIXEL_PERFECT /* SCALING: crisp, whole number pixels */
+};
 static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
     "30", "60", "120", "REFRESH", "UNLIMITED"
 };
-static int g_fps_limit_index = FPS_LIMIT_REFRESH_INDEX;
+/* Pause menu SCALING row: matches display.h's DISPLAY_SCALE_* order. */
+static const char *g_scale_labels[DISPLAY_SCALE_FIT + 1] = {
+    "PIXEL PERFECT", "FIT"
+};
 
 /* Pause menu FILTERS row: matches filter.h's FILTER_OFF..FILTER_BOTH order. */
 static const char *g_filter_labels[FILTER_MODE_COUNT] = {
@@ -52,6 +60,7 @@ static const char *g_filter_labels[FILTER_MODE_COUNT] = {
 
 /* Defined further down, alongside the other keyboard shortcut handling. */
 static void toggle_fullscreen(void);
+static void toggle_scale_mode(void);
 /* Defined further down, alongside the rest of the level HUD drawing. */
 static void draw_level_frame(game_context_t *game);
 /* Defined further down, alongside the level file loading it wraps. Returns 0 or a load error. */
@@ -442,10 +451,11 @@ static void draw_score(int score) {
 #define PAUSE_OPTION_VSYNC   0
 #define PAUSE_OPTION_FPS     1
 #define PAUSE_OPTION_MODE    2
-#define PAUSE_OPTION_FILTERS 3
-#define PAUSE_OPTION_WARP    4
-#define PAUSE_OPTION_QUIT    5
-#define PAUSE_OPTION_COUNT   6
+#define PAUSE_OPTION_SCALING 3
+#define PAUSE_OPTION_FILTERS 4
+#define PAUSE_OPTION_WARP    5
+#define PAUSE_OPTION_QUIT    6
+#define PAUSE_OPTION_COUNT   7
 
 /* Levels on disk, res/levels/level1.ddt through level10.ddt; WARP cycles through them. */
 #define TOTAL_LEVELS 10
@@ -453,14 +463,17 @@ static void draw_score(int score) {
 static void pause_menu_option_text(game_context_t *game, int option, char *out, size_t out_size) {
     switch (option) {
     case PAUSE_OPTION_VSYNC:
-        snprintf(out, out_size, "V-SYNC: %s", g_vsync_enabled ? "ON" : "OFF");
+        snprintf(out, out_size, "V-SYNC: %s", g_config.vsync ? "ON" : "OFF");
         break;
     case PAUSE_OPTION_FPS:
-        snprintf(out, out_size, "FPS LIMIT: %s", g_fps_limit_labels[g_fps_limit_index]);
+        snprintf(out, out_size, "FPS LIMIT: %s", g_fps_limit_labels[g_config.fps_limit]);
         break;
     case PAUSE_OPTION_MODE:
         snprintf(out, out_size, "MODE: %s",
             ((SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0) ? "FULLSCREEN" : "WINDOWED");
+        break;
+    case PAUSE_OPTION_SCALING:
+        snprintf(out, out_size, "SCALING: %s", g_scale_labels[display_scale_mode()]);
         break;
     case PAUSE_OPTION_FILTERS:
         snprintf(out, out_size, "FILTERS: %s", g_filter_labels[filter_mode()]);
@@ -484,17 +497,26 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
 static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option) {
     switch (option) {
     case PAUSE_OPTION_VSYNC:
-        g_vsync_enabled = !g_vsync_enabled;
-        display_set_vsync(g_vsync_enabled);
+        g_config.vsync = !g_config.vsync;
+        display_set_vsync(g_config.vsync);
+        config_save(&g_config);
         break;
     case PAUSE_OPTION_FPS:
-        g_fps_limit_index = (g_fps_limit_index + 1) % FPS_LIMIT_COUNT;
+        g_config.fps_limit = (g_config.fps_limit + 1) % FPS_LIMIT_COUNT;
+        config_save(&g_config);
         break;
     case PAUSE_OPTION_MODE:
+        /* Saves by itself, since the shortcut toggles the mode too. */
         toggle_fullscreen();
         break;
+    case PAUSE_OPTION_SCALING:
+        /* Saves by itself, since F5 toggles it as well. */
+        toggle_scale_mode();
+        break;
     case PAUSE_OPTION_FILTERS:
-        filter_set_mode((filter_mode() + 1) % FILTER_MODE_COUNT);
+        g_config.filter = (g_config.filter + 1) % FILTER_MODE_COUNT;
+        filter_set_mode(g_config.filter);
+        config_save(&g_config);
         break;
     case PAUSE_OPTION_WARP:
         /*
@@ -518,8 +540,13 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
 
 static void draw_pause_menu(game_context_t *game) {
     int offset = display_center_offset();
-    const int columns = 24;
-    const int rows = 11;
+    /*
+     * 25 columns hold the longest row, "SCALING: PIXEL PERFECT", with the 18
+     * pixel indent the rows are drawn at; 12 rows hold the title and the seven
+     * rows, which are 10 pixels apart.
+     */
+    const int columns = 25;
+    const int rows = 12;
     int box_x = offset + ((DISPLAY_BASE_WIDTH - (columns * 8)) / 2);
     int box_y = DISPLAY_SCENE_TOP + (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (rows * 8)) / 2);
     char line[32];
@@ -805,10 +832,26 @@ static void toggle_fullscreen(void) {
         SDL_SetWindowFullscreen(g_window, false);
         SDL_SetWindowSize(g_window, DISPLAY_BASE_WIDTH * 3, DISPLAY_HEIGHT * 3);
         SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+        g_config.fullscreen = 0;
     } else {
         SDL_SetWindowFullscreen(g_window, true);
+        g_config.fullscreen = 1;
     }
+    /* Remembered here rather than by the caller: the keyboard shortcut does this too. */
+    config_save(&g_config);
     SDL_SyncWindow(g_window);
+}
+
+/*
+ * The SCALING row and the F5 shortcut both come through here, so the settings
+ * file follows whichever one moved it. The display picks the new mode up at the
+ * next display_sync().
+ */
+static void toggle_scale_mode(void) {
+    g_config.scaling = (g_config.scaling == DISPLAY_SCALE_PIXEL_PERFECT) ?
+        DISPLAY_SCALE_FIT : DISPLAY_SCALE_PIXEL_PERFECT;
+    display_set_scale_mode(g_config.scaling);
+    config_save(&g_config);
 }
 
 /*
@@ -945,7 +988,7 @@ static void get_keys(keys_state_t* state) {
                 }
             }
             if (event.key.scancode == SDL_SCANCODE_F5 && is_repeat == 0) {
-                display_toggle_scale_mode();
+                toggle_scale_mode();
             }
         } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
@@ -1029,7 +1072,7 @@ typedef struct frame_pacer_struct {
 static uint64_t pacer_budget_ns(void) {
     uint64_t period;
 
-    switch (g_fps_limit_index) {
+    switch (g_config.fps_limit) {
     case 0: return (uint64_t)SDL_NS_PER_SECOND / 30;
     case 1: return (uint64_t)SDL_NS_PER_SECOND / 60;
     case 2: return (uint64_t)SDL_NS_PER_SECOND / 120;
@@ -2222,6 +2265,7 @@ static int game_shutdown(void) {
 
 int game_main(int is_windowed, int starting_level) {
     int ret = 0;
+    int fullscreen;
     const int windowed_scale = 3;
 
     SDL_SetMainReady();
@@ -2230,6 +2274,14 @@ int game_main(int is_windowed, int starting_level) {
         printf("Failed to initialize SDL video. Error: (%s) \n", SDL_GetError());
         return -1;
     }
+
+    /*
+     * The settings from the last run, before anything reads them. `-w` is an
+     * override for this run only, so it is not written back: the file still
+     * says what the pause menu last left the game as.
+     */
+    config_load(&g_config);
+    fullscreen = is_windowed ? 0 : g_config.fullscreen;
 
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
         printf("Failed to initialize SDL audio. Error: (%s) \n", SDL_GetError());
@@ -2247,14 +2299,14 @@ int game_main(int is_windowed, int starting_level) {
      * SDL3 takes no position here: a windowed run is centered afterwards, and a
      * plain SDL_WINDOW_FULLSCREEN with no mode set is the old fullscreen desktop.
      */
-    if (is_windowed) {
-        g_window = SDL_CreateWindow("",
-            DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
-            SDL_WINDOW_RESIZABLE);
-    } else {
+    if (fullscreen) {
         g_window = SDL_CreateWindow("",
             DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
             SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE);
+    } else {
+        g_window = SDL_CreateWindow("",
+            DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
+            SDL_WINDOW_RESIZABLE);
     }
 
     if (g_window == NULL) {
@@ -2262,7 +2314,7 @@ int game_main(int is_windowed, int starting_level) {
         return -4;
     }
 
-    if (is_windowed) {
+    if (!fullscreen) {
         SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     }
 
@@ -2278,9 +2330,22 @@ int game_main(int is_windowed, int starting_level) {
         return -5;
     }
 
-    if (display_init(g_renderer, DISPLAY_SCALE_PIXEL_PERFECT) != 0) {
+    /*
+     * The filter decides where the picture lands and how wide and tall the
+     * texture has to be, so it is in place before the display is built. NTSC
+     * still builds its palette on the first frame, as it does when the row is
+     * toggled.
+     */
+    filter_set_mode(g_config.filter);
+
+    if (display_init(g_renderer, g_config.scaling) != 0) {
         printf("Failed to initialize the display. \n");
         return -3;
+    }
+
+    /* display_init() turns vsync on for the default; the saved setting may be off. */
+    if (!g_config.vsync) {
+        display_set_vsync(0);
     }
 
     // Flush any pre-pressed keys

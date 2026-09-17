@@ -8,6 +8,7 @@ tests/test_invfreq
 tests/test_monster
 tests/test_display
 tests/test_filter
+tests/test_config
 *.dSYM/
 
 out/**

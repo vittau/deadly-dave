@@ -3,6 +3,7 @@ BIN = ddave
 UNAME_S := $(shell uname -s)
 
 H_FILES := include/bullet.h
+H_FILES += include/config.h
 H_FILES += include/dave.h
 H_FILES += include/display.h
 H_FILES += include/filter.h
@@ -16,6 +17,7 @@ H_FILES += include/tile.h
 
 C_FILES := main.c
 C_FILES += game.c
+C_FILES += config.c
 C_FILES += display.c
 C_FILES += filter.c
 C_FILES += ntsc.c

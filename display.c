@@ -258,9 +258,13 @@ void display_sync(void) {
  * which runs at the top of the frame: rebuilding the framebuffer here would
  * pull it from under the frame that is currently being drawn.
  */
-void display_toggle_scale_mode(void) {
-    g_scale_mode = (g_scale_mode == DISPLAY_SCALE_PIXEL_PERFECT) ?
+void display_set_scale_mode(int mode) {
+    g_scale_mode = (mode == DISPLAY_SCALE_FIT) ?
         DISPLAY_SCALE_FIT : DISPLAY_SCALE_PIXEL_PERFECT;
+}
+
+int display_scale_mode(void) {
+    return g_scale_mode;
 }
 
 void display_set_vsync(int enabled) {

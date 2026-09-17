@@ -48,6 +48,43 @@ except the icons.
   buffer size; every tune has its own value in `soundfx.c` (the jumping sound is
   345). A too large value writes far past the buffer and the process dies with
   SIGBUS, which is what `test_invfreq` used to do.
+- `./tests/test_config` checks the settings file parser: a full file, the lines
+  it has to tolerate (comments, blank lines, CRLF, an unknown key, a key with
+  spaces around it, a non numeric value, a last line with no newline), the range
+  guard on `fps_limit`/`filter` and the `config_format()` → `config_parse()`
+  round trip. It is pure and links `config.c` for the parser alone.
+
+## Settings
+
+The pause menu rows are kept between runs. `config.c` / `include/config.h` owns
+them: `config_t` carries V-SYNC, FPS LIMIT, FILTERS, MODE and SCALING, with the
+defaults in the `g_config` initializer in `game.c` (a first run, or a deleted
+file, gets vsync on, the frame paced to the display's refresh, no filter, full
+screen and pixel perfect scaling). `config_load()` runs right after `SDL_Init()`
+in `game_main()`, before the window is created, so MODE decides that window, and
+it runs before `display_init()`, which is handed SCALING and reads the filter
+mode, so both are already in place when the texture is sized; FPS LIMIT is only
+read by the pacer. Every pause menu change calls `config_save()`, as do
+`toggle_fullscreen()` and `toggle_scale_mode()`, because `Cmd`/`Alt`+`Enter` and
+`F5` go through those two as well. `-w` overrides MODE for that one run and is
+deliberately not written back.
+
+`FPS_LIMIT_REFRESH_INDEX`/`_UNLIMITED_`/`_COUNT` live in `config.h` rather than
+`game.c`, because they are the range of a persisted field and `config_parse()`
+has to guard it; the labels and the pacing stay in `game.c`.
+
+The file is `<SDL_GetPrefPath("vittau", "deadly-dave")>/config.ini`, a plain
+`key=value` list: `~/Library/Application Support/vittau/deadly-dave/` on macOS,
+`%APPDATA%\vittau\deadly-dave\` on Windows, `~/.local/share/vittau/deadly-dave/`
+on Linux. The two strings are the directory name SDL builds, so they follow
+SDL's rules and match the bundle identifier. **Never** write next to
+`SDL_GetBasePath()`: on macOS that is inside the `.app`, which is read-only once
+installed and whose code signature writing to it would break. `config_parse()`
+and `config_format()` are pure and tested; a key this version does not know, a
+malformed line and a number out of range are skipped one at a time, so a
+hand-edited file, or one written by a newer version, still loads what it can.
+Keep a new setting by adding it to `config_t`, to both branches of
+`config_parse()`, to `config_format()` and to the `g_config` initializer.
 
 ## CRT filters
 
@@ -82,8 +119,9 @@ except the icons.
   320 pixel framebuffer becomes 749.
 - Both are `-lm` users (`sin`/`cos`/`pow`/`exp`), hence the extra link line in
   the Makefile, CMakeLists.txt and tests/Makefile.
-- The pause menu's `FILTERS` row cycles the mode. Like V-SYNC/FPS/MODE it is a
-  runtime setting and is not persisted.
+- The pause menu's `FILTERS` row cycles the mode. Like V-SYNC/FPS/MODE it is
+  kept between runs (see Settings); the saved mode is applied before
+  `display_init()`, so the texture is built at the filtered size from the start.
 
 ## Levels and the original game data
 
