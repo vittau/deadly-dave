@@ -209,17 +209,17 @@ static double invfreq_to_freq(uint16_t invfreq) {
  * M. Fernández Guasti, in 'Squdel function'.
  */
 static double sqd(double x, double freq) {
-    double intensity = 1;
-    if (freq >= 6000)
-        return invfreq_sin(x);
-    if (freq >= 4000)
-        intensity = 0.1;
-    else if (freq >= 2000) 
-        intensity = 0.1;
-    else
-        intensity = 0.001;
+    double intensity;
+    double s;
 
-    return invfreq_sin(x) / invfreq_sqrt((invfreq_sin(x) * invfreq_sin(x)) + intensity);
+    if (freq >= 6000) {
+        return invfreq_sin(x);
+    }
+
+    /* Anything at or above 2000 gets the same soft mix; below it, a hard one. */
+    intensity = (freq >= 2000) ? 0.1 : 0.001;
+    s = invfreq_sin(x);
+    return s / invfreq_sqrt((s * s) + intensity);
 }
 
 size_t invfreq_decode_soundfx(const uint16_t *data, uint8_t *out, int samples_per_symbol) {
