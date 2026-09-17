@@ -819,10 +819,22 @@ dave_t* dave_create(soundfx_t *sfx, int x, int y) {
     dave->tile->y = y;
     dave->tile->width = 20;
     dave->tile->height = 16;
-    dave->tile->collision_dx = 2;
+    /*
+     * The sprite is 20px wide but Dave's body is only x+4..x+12 of it, and the
+     * movement checks probe x+1 and x+12 (see dave_collision_left/right). The
+     * box matches those, so what burns or scores is what he visibly touches
+     * instead of a rectangle that juts 4 pixels past his right side.
+     */
+    dave->tile->collision_dx = 1;
     dave->tile->collision_dy = 2;
-    dave->tile->collision_dw = -6;
-    dave->tile->collision_dh = 0;
+    dave->tile->collision_dw = -8;
+    /*
+     * dh is -2 so the box stops at y+16, Dave's feet. With the height left at
+     * 16 it dipped 2 pixels into the tile he is standing on, which burned him
+     * on every fire that shares the floor row (the well in level 10's warp
+     * zone is one) and lit him up again as soon as a life restarted there.
+     */
+    dave->tile->collision_dh = -2;
 
     dave->tile->mod = DAVE;
     dave->tile->tick = NULL;
