@@ -1857,7 +1857,19 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                     return -2;
                 }
             } else if (map_str[i] == '\n' || map_str[i] == '\r') {
-                //just ignore
+                /*
+                 * A newline closes the column just like the ';' does when a
+                 * whole tag is waiting. level8.ddt shipped without the ';' at
+                 * the end of one line and the parse stopped right there, so
+                 * everything to the right of it stayed blank and the level
+                 * looked cut in half; a missing ';' must not do that again.
+                 */
+                if (collected_count == 3) {
+                    collected_count = 0;
+                    tile_create(&map[cur_col*12 + pos], tag, cur_col*16, pos*16);
+                    cur_col++;
+                    pos = 0;
+                }
             } else {
                 if (collected_count >= 3) {
                     free(buf);

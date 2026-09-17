@@ -1,22 +1,3 @@
-# Original Dangerous Dave Level 8
-# Tiles:
-# [DRT]: dirt brick      [RBK]: red brick       [PPK]: purple platform
-# [PIR]: pipe right      [PID]: pipe down       [BBK]: blue brick
-# [FR1]: fire, type1     [FR2]: fire, type2     [FR3]: fire, type3
-# [WT1]: water, type1    [WT2]: water, type2    [WT3]: water, type3
-# [WT4]: water, type4    [WT5]: water, type5    [PPF]: purple fake platform
-# [VI1]: vines, type1    [VI2]: vines, type2    [VI3]: vines, type3
-# [VI4]: vines, type4    [PCK]: purple column   [BIM]: metal beam
-# [BCM]: blue brick
-#
-# Items:
-# [ * ]: purple circle   [ v ]: blue diamond    [ V ]: red diamond
-# [ W ]: crown           [ ! ]: scepter         [ Y ]: grail
-# [JPK]: jetpack         [GUN]: gun
-#
-# Special:
-# [ D ]: dave            [ X ]: door
-
    ,DRB,DRB,DRB,DRB,DRB,DRB,DRB,DRB,DRB,DRB;
    ,PPK,   ,   ,   ,   ,   ,   ,   ,PIR,DRB;
    ,PPK,   ,   ,BBK,   ,   ,   ,   ,D+M,DRB;
@@ -32,7 +13,7 @@
    ,PPK,   ,   ,PPK,   ,   ,   ,   ,   ,WT2;
    ,PPK,   , O ,PPK,   ,   ,   ,   ,  M,DRB;
    ,PCK,PCK,PCK,PCK,PCK,PCK,PCK,DRT,  M,DRB;
-   ,PPK,   ,   ,GUN,   ,   , * ,   ,  M,DRB
+   ,PPK,   ,   ,GUN,   ,   , * ,   ,  M,DRB;
    ,PPK,   ,   ,   ,   ,   ,   ,   ,   ,WT1;
    ,PPK, * ,   ,   ,   ,   ,   ,   ,  M,DRB;
    ,PPK,   ,   ,PPF,   ,   ,   ,DRT,DRT,DRB;
@@ -70,7 +51,7 @@
    ,BBK,   ,   ,BBK,DRT,DR4,   ,   ,VI1,DRT;
    ,BBK,   ,   ,BBK,DRT,   ,   ,   ,   ,DRT;
    ,BBK,   ,   ,   ,DRT,   ,   ,   ,   ,DRT;
-   ,BBK,VI2,   ,   ,DRT,   ,   ,   ,   ,DRT;
+   ,BBK,VI2,   ,   ,DRT,GD1,   ,   ,   ,DRT;
    ,BBK,   ,   ,   ,DRT,   ,   ,   ,   ,DRT;
    ,BBK,   ,   ,VI3,DRT,   ,   ,   ,   ,DRT;
    ,BBK,   ,   ,   ,DRT,DR1,   ,   ,JPK,DRT;
