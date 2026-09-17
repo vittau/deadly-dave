@@ -8,7 +8,8 @@ except the icons.
 
 - `make` builds `ddave` against the system SDL3 (`pkg-config sdl3`). Fast, use it
   while iterating. It compiles with `-std=c99 -Wall` and is warning-free; there
-  is no linter, formatter or typecheck besides that.
+  is no linter, formatter or typecheck besides that. On macOS it also builds
+  `Deadly Dave.app`; a bare binary is opened by Terminal when double-clicked.
 - CMake (`cmake -S . -B build -G Ninja && cmake --build build`) fetches and
   statically links SDL 3.4.16 and writes the binary to the repo root as
   `deadly-dave`. This is what CI and the releases use; configuring takes ~40s

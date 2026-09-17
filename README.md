@@ -68,6 +68,10 @@ The game needs **SDL 3.4.16** or newer and a C99 compiler.
     make app             # macOS: wraps the game in "Deadly Dave.app"
     cd tests && make     # unit tests
 
+On macOS `make` also produces `Deadly Dave.app`: double-click that one, not the
+`ddave` binary, since a bare Unix executable always opens a Terminal when
+double-clicked.
+
 The CMake build fetches and links SDL3 statically instead, which is what the
 releases use. Pushing a tag (`git tag v1.0.0 && git push origin v1.0.0`) builds
 the three packages and publishes them.

@@ -1,5 +1,6 @@
 CC = gcc
 BIN = ddave
+UNAME_S := $(shell uname -s)
 
 H_FILES := include/bullet.h
 H_FILES += include/dave.h
@@ -30,6 +31,12 @@ CFLAGS += $(shell pkg-config --cflags sdl3)
 LIBS := $(shell pkg-config --libs sdl3)
 
 all: $(BIN)
+
+# On macOS a bare Unix binary is opened by Terminal when double-clicked, so the
+# default build also wraps it in the .app, which opens a window on its own.
+ifeq ($(UNAME_S),Darwin)
+all: app
+endif
 
 $(BIN): $(C_FILES) $(H_FILES)
 	$(CC) $(C_FILES) $(CFLAGS) -Iinclude $(LIBS) -o $(BIN)
