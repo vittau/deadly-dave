@@ -44,10 +44,12 @@ emulator and without anything to install.
 | Shoot         | `Space`, or left Ctrl       | `X`, or right shoulder           |
 | Jetpack       | `J`                         | `B`                              |
 | Quit popup    | `Escape`                    | `Start`                          |
+| In the popup  | `Y` / `N`                   | `A` quits, `B` goes back         |
 
 On the keyboard up jumps, faithful to the original. On a pad it only climbs and
 flies, because jumping whenever a stick went up would be miserable, so there
-`A` is the jump.
+`A` is the jump. On the title screen any of the pad's face buttons, or `Start`,
+starts the game.
 
 ## Getting it
 

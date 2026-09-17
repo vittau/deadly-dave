@@ -616,10 +616,24 @@ static void gamepad_event(SDL_Event *event, keys_state_t *state) {
         gamepad_open();
 
     } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
-        if (event->gbutton.button == SDL_GAMEPAD_BUTTON_EAST) {
+        if (event->gbutton.button == SDL_GAMEPAD_BUTTON_SOUTH) {
+            /* Answers the quit popup with yes. */
+            state->key_y = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_EAST) {
             state->jetpack = 1;
+            /* Answers the quit popup with no. */
+            state->key_n = 1;
         } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_START) {
+            /*
+             * Start is Escape once the game is running, but it is also the
+             * button everyone presses to leave the title screen, so raise both
+             * and let the intro pick; see start_intro().
+             */
             state->escape = 1;
+            state->enter = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_NORTH) {
+            /* Nothing else uses the fourth face button; it starts the game too. */
+            state->enter = 1;
         }
     }
 }
@@ -764,13 +778,18 @@ static int start_intro(void) {
 
         get_keys(&key_state);
 
-        /* Quit, or the window was closed: leave so the game can shut down. */
-        if (key_state.escape || key_state.quit) {
-            return 0;
-        }
-
-        if (key_state.enter || key_state.space) {
+        /*
+         * Enter, space or any of the pad's face buttons starts the game. The
+         * pad's Start raises escape as well, so this comes first and wins: on
+         * the title screen Start means "go", not "quit".
+         */
+        if (key_state.enter || key_state.space || key_state.jump ||
+                key_state.fire || key_state.jetpack) {
             intro_should_finish = 1;
+
+        /* Quit, or the window was closed: leave so the game can shut down. */
+        } else if (key_state.escape || key_state.quit) {
+            return 0;
         }
 
         SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);

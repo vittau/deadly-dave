@@ -17,8 +17,9 @@ static void check(int condition, const char *what, int out_w, int out_h, int mod
 
 /*
  * Whatever the window size is, the picture must keep the aspect-ratio of the
- * framebuffer and fit horizontally, and the scene (the part between the two HUD
- * bars) must be centered vertically.
+ * framebuffer, fit horizontally and never run past the bottom edge. The scene
+ * (the part between the two HUD bars) is the thing that gets centered
+ * vertically, but only while the picture has room to move.
  */
 static void check_invariants(int out_w, int out_h, int mode) {
     display_geometry_t g;
@@ -42,9 +43,17 @@ static void check_invariants(int out_w, int out_h, int mode) {
     check((g.width % 8) == 0, "framebuffer width is not on the 8 pixel grid", out_w, out_h, mode);
     check(g.dst.w <= out_w, "picture is wider than the window", out_w, out_h, mode);
     check(g.dst.x == (out_w - g.dst.w) / 2, "picture is not centered horizontally", out_w, out_h, mode);
+    check(g.dst.y >= 0, "picture starts above the window", out_w, out_h, mode);
+    check(g.dst.y + g.dst.h <= out_h, "picture runs past the bottom edge", out_w, out_h, mode);
     check(scene_top >= -0.5 && scene_bottom <= out_h + 0.5, "scene does not fit in the window", out_w, out_h, mode);
-    check(fabs(((scene_top + scene_bottom) / 2.0) - (out_h / 2.0)) <= 1.0,
-        "scene is not centered", out_w, out_h, mode);
+    if (g.dst.y + g.dst.h < out_h) {
+        /* There is room, so the scene gets to be centered. */
+        check(fabs(((scene_top + scene_bottom) / 2.0) - (out_h / 2.0)) <= 1.0,
+            "scene is not centered", out_w, out_h, mode);
+    } else {
+        /* No room at all: the picture is flush with the bottom instead. */
+        check(g.dst.y == out_h - g.dst.h, "picture is not flush with the bottom", out_w, out_h, mode);
+    }
     check(drift < 0.02, "pixels are not square, the picture is stretched", out_w, out_h, mode);
 
     if (mode == DISPLAY_SCALE_PIXEL_PERFECT && out_h >= DISPLAY_HEIGHT) {
@@ -118,6 +127,20 @@ int main(void) {
         printf("  FAIL [0x0]: expected the base framebuffer, got %dx%d \n",
             degenerate.width, degenerate.height);
         failures++;
+    }
+
+    /*
+     * 1280x800 is the Steam Deck and the picture fills it exactly, so there is
+     * no room for the nudge that centers the scene: anything but 0 here cuts the
+     * bottom rows off the screen, trophy banner included.
+     */
+    {
+        display_geometry_t deck = display_compute_geometry(1280, 800, DISPLAY_SCALE_PIXEL_PERFECT);
+        if (deck.dst.y != 0) {
+            printf("  FAIL [1280x800]: picture pushed to y %d, the bottom of the framebuffer is off screen \n",
+                deck.dst.y);
+            failures++;
+        }
     }
 
     if (failures == 0) {

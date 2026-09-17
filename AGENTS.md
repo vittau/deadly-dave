@@ -64,6 +64,13 @@ except the icons.
   centred by `game_view_x()` with black on the sides, and projectile range is
   kept at the original 320px on purpose, so a wider window changes nothing but
   what you can see.
+- `display_compute_geometry()` pushes the picture down by half the difference
+  between the two HUD bars, so the scene between them is what looks centered, but
+  only as far as the window allows: a screen the picture exactly fills (1280x800
+  on a Steam Deck) gets no nudge, otherwise the bottom rows, and the trophy
+  banner on them, end up off the screen. `tests/test_display.c` checks both the
+  "never past the bottom edge" and the "scene centered while there is room"
+  invariants.
 - Monsters, plasma and the bullet are drawn blended: `render_tile_idx` XORs
   their colours over what is behind them. The XOR must keep the sprite's alpha
   byte, or it produces alpha 0 pixels that render black and eat the level
@@ -74,6 +81,14 @@ except the icons.
 - Up is split on purpose. The keyboard "up" both jumps and climbs (faithful to
   the original); a pad's up feeds `keys_state.climb_up`, which only climbs and
   flies, and only the pad's `A` jumps. Keep the two apart.
+- Pad input is split between `gamepad_update()` (held buttons and axes, once per
+  frame) and `gamepad_event()` (the one shot buttons). The intro starts on
+  Enter/Space or any face button, and `Start` there raises `enter` as well as
+  `escape` on purpose: on the title screen it means "go", in game it is the quit
+  popup. That popup is answered with the pad's `A` (yes, `key_y`) and `B` (no,
+  `key_n`); `X` shoots and `B` also toggles the jetpack, so do not reuse those
+  buttons without checking what reads the flag. `keys_state.key_y`, `.key_n`,
+  `.enter` and `.quit` are only read by the popups and the intro.
 - `game_shutdown()` is the only exit path. Route new exits through it so the
   process really terminates instead of leaving a window-less process behind.
 - Portability, since the Windows CI job is MSVC: `access()`/`chdir()` are POSIX,

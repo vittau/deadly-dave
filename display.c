@@ -98,8 +98,10 @@ display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode
      * What the player looks at is the scene between the two HUD bars, and the
      * bottom bar is taller than the top one, so a picture centered as a whole
      * still shows the scene a little high. Move it down by half the difference
-     * of the bars. When the picture already fills the window that runs a few
-     * pixels past the bottom edge, over the black bottom bar, which is fine.
+     * of the bars, but only as far as the window allows: on a screen the picture
+     * exactly fills (1280x800 on a Steam Deck, where the scale is 4) there is no
+     * room at all, and spending the shift there pushed the last rows, and the
+     * trophy banner sitting on them, off the bottom edge.
      */
     shift = (DISPLAY_BOTTOM_BAR - DISPLAY_TOP_BAR) / 2;
     if (geometry.scale > 0) {
@@ -108,6 +110,9 @@ display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode
         shift = (shift * geometry.dst.h) / DISPLAY_HEIGHT;
     }
     geometry.dst.y = geometry.dst.y + shift;
+    if (geometry.dst.y > (out_h - geometry.dst.h)) {
+        geometry.dst.y = out_h - geometry.dst.h;
+    }
 
     return geometry;
 }
