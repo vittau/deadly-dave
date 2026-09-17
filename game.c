@@ -1301,10 +1301,14 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     }
 
     /*
-     * The warp corridor ends when Dave leaves the view, or at the level's right
-     * edge when the viewport is wider than the corridor and shows all of it.
+     * The warp corridor is authored for the original 320 pixel wide screen and
+     * its level data is wider than that, so the walk is measured against the
+     * original width and not against the viewport: on a wide window Dave used to
+     * walk the whole level data instead of the length of the original screen,
+     * which is a long wait once the corridor fits on screen in full. The
+     * corridor's own right edge still ends the walk when that comes first.
      */
-    if ((game->dave->tile->x - game_view_x(game)) > (display_width() - 20) ||
+    if (game->dave->tile->x > (DISPLAY_BASE_WIDTH - 20) ||
             game->dave->tile->x > ((int)game->level_columns * TILE_SIZE) - 20) {
         if (game->level_secret_state == SECRET_LEVEL_ENTER) {
             game->level_secret_state = SECRET_LEVEL_VISITED;

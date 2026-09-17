@@ -116,6 +116,11 @@ except the icons.
 - The state structs and their tiles are allocated with `calloc()`: the drawing
   and collision code assumes every field starts at zero. Keep it that way
   instead of trusting `malloc`.
+- The warp corridor between levels is authored for the original 320 pixel
+  screen, so `game_warp()` ends the walk at `DISPLAY_BASE_WIDTH - 20` in level
+  coordinates, not at the viewport edge: the level data is wider than 320 and on
+  a wide window the intermission otherwise lasted as long as the whole corridor.
+  Keep that measurement in level coordinates, free of `game_view_x()`.
 - `get_keys()` writes `keys_state.enter` and `.quit` and never clears them, and
   only the intro reads `enter`. Do not use them as edge triggered inside the
   game loop.
