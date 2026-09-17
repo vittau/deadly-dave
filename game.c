@@ -1612,7 +1612,12 @@ int game_main(int is_windowed, int starting_level) {
         SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     }
 
-    g_renderer = SDL_CreateRenderer(g_window, SDL_SOFTWARE_RENDERER);
+    /*
+     * Let SDL pick the backend. The accelerated one scales the framebuffer on
+     * the GPU, which matters on a large window, and every platform SDL runs on
+     * still has the software renderer as a fallback.
+     */
+    g_renderer = SDL_CreateRenderer(g_window, NULL);
 
     if (g_renderer == NULL) {
         printf("Failed to create the renderer. Error: (%s) \n", SDL_GetError());
