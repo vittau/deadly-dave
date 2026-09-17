@@ -48,12 +48,12 @@
    ,BBK,   ,   ,   ,BBK,RBK,   ,   ,PPK,FR1;
    ,BBK,   ,BBK,BBK,BBK,RBK, v ,   ,RBK,RBK;
    ,BBK,   ,   ,   ,   ,RBK,   ,   ,VI1,RBK;
-   ,BBK,   ,   ,   , * ,RBK,TR1,TR1,TR1,RBK;
-   ,BBK,   ,   ,BBK,   ,RBK,TR1,TR1,TR1,RBK;
-   ,BBK,   ,   ,BBK,   ,RBK,TR1,TR1,TR1,RBK;
-   ,BBK, v ,   ,BBK,   ,RBK,TR1,TR1,TR1,RBK;
-   ,BBK,   ,   ,BBK,   ,RBK,RBK,TR1,TR1,RBK;
-   ,BBK,   ,   ,BBK,   ,   ,RBK,RBK,TR1,RBK;
+   ,BBK,   ,   ,   , * ,RBK,TR2,TR2,TR2,RBK;
+   ,BBK,   ,   ,BBK,   ,RBK,TR2,TR2,TR2,RBK;
+   ,BBK,   ,   ,BBK,   ,RBK,TR2,TR2,TR2,RBK;
+   ,BBK, v ,   ,BBK,   ,RBK,TR2,TR2,TR2,RBK;
+   ,BBK,   ,   ,BBK,   ,RBK,RBK,TR2,TR2,RBK;
+   ,BBK,   ,   ,BBK,   ,   ,RBK,RBK,TR2,RBK;
    ,BBK,   ,   ,   ,BBK,   ,   ,RBK,   ,RBK;
    ,BBK,   , v ,   ,VI1,BBK,   ,RBK,   ,RBK;
    ,BBK,   ,   ,   ,BBK,BBK,   ,RBK,   ,RBK;

@@ -18,7 +18,7 @@
 # [ D ]: dave            [ X ]: door
 
    ,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK,RBK;
-   ,RBK,PIR, D ,   ,   ,   ,   ,   ,  M,DRT;
+   ,RBK,PID, D ,   ,   ,   ,   ,   ,  M,DRT;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,VI1;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,VI3;
    ,RBK,   ,   ,   ,   ,   ,GUN,  M,DRT,DRT;
@@ -55,9 +55,9 @@
    ,RBK,   ,   ,   ,RBK,JPK,RBK,   ,   ,RBK;
    ,RBK,   ,   ,   ,RBK,RBK,RBK,   ,   ,RBK;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,RBK;
-   ,RBK,   ,   ,TR4,TR1,TR6,   ,   ,   ,RBK;
-   ,RBK,   ,   ,TR1,TR1,TR1,TRK,TRK,TRK,RBK;
-   ,RBK,   ,   ,TR3,TR1,TR5,   ,   ,   ,WT1;
+   ,RBK,   ,   ,TR4,TR2,TR5,   ,   ,   ,RBK;
+   ,RBK,   ,   ,TR2,TR2,TR2,TRK,TRK,TRK,RBK;
+   ,RBK,   ,   ,TR3,TR2,TR6,   ,   ,   ,WT1;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,WT2;
    ,RBK,   ,   ,   ,   ,   ,   ,   ,   ,WT3;
    ,RBK,   ,   ,   , V ,   ,   ,   ,   ,WT4;
