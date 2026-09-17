@@ -1,0 +1,155 @@
+name: release
+
+# Pushing a tag like v1.0.0 builds the portable packages and attaches them to a
+# GitHub release. Run it by hand to only produce the workflow artifacts.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux (x86_64)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build build-essential pkg-config libgl1-mesa-dev \
+            libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev \
+            libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev \
+            libwayland-dev wayland-protocols libdecor-0-dev \
+            libasound2-dev libpulse-dev libdbus-1-dev libudev-dev \
+            libdrm-dev libgbm-dev libegl1-mesa-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          mkdir -p dist/deadly-dave
+          cp deadly-dave dist/deadly-dave/
+          cp -R res dist/deadly-dave/res
+          rm -rf dist/deadly-dave/res/screenshots
+          tar -C dist -czf deadly-dave-linux-x86_64.tar.gz deadly-dave
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: deadly-dave-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        # MultiThreaded links the C runtime statically, so the exe needs no
+        # Visual C++ redistributable.
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/deadly-dave | Out-Null
+          Copy-Item deadly-dave.exe dist/deadly-dave/
+          Copy-Item -Recurse res dist/deadly-dave/res
+          Remove-Item -Recurse -Force dist/deadly-dave/res/screenshots
+          Compress-Archive -Path dist/deadly-dave -DestinationPath deadly-dave-windows-x86_64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: deadly-dave-windows-x86_64.zip
+          if-no-files-found: error
+
+  macos:
+    name: macOS (universal)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        # One binary for both Apple Silicon and Intel.
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          APP="Deadly Dave.app"
+
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp deadly-dave "$APP/Contents/MacOS/deadly-dave"
+          cp -R res "$APP/Contents/Resources/res"
+          rm -rf "$APP/Contents/Resources/res/screenshots"
+
+          # SDL looks for the resources in the bundle's Resources directory.
+          cat > "$APP/Contents/Info.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key><string>en</string>
+              <key>CFBundleExecutable</key><string>deadly-dave</string>
+              <key>CFBundleIdentifier</key><string>io.github.vittau.deadly-dave</string>
+              <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+              <key>CFBundleName</key><string>Deadly Dave</string>
+              <key>CFBundleDisplayName</key><string>Deadly Dave</string>
+              <key>CFBundlePackageType</key><string>APPL</string>
+              <key>CFBundleShortVersionString</key><string>${VERSION:-dev}</string>
+              <key>CFBundleVersion</key><string>${VERSION:-dev}</string>
+              <key>LSMinimumSystemVersion</key><string>11.0</string>
+              <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          PLIST
+
+          # Ad-hoc signature, enough for the binary to run on Apple Silicon.
+          codesign --force --sign - "$APP"
+
+          ditto -c -k --keepParent "$APP" deadly-dave-macos-universal.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: deadly-dave-macos-universal.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: [linux, windows, macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

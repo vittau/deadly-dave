@@ -26,6 +26,30 @@ The game needs **SDL 3.4.16** or newer and nothing else.
 
 The CMake build fetches and links SDL3 statically instead.
 
+### Releases
+
+Pushing a tag builds portable packages for the three systems and attaches them
+to a GitHub release:
+
+    git tag v1.0.0
+    git push origin v1.0.0
+
+The workflow can also be run by hand from the Actions tab, which builds the
+packages without publishing a release. Each package is a self-contained folder
+(the executable plus the `res` directory it reads at runtime) and needs nothing
+installed:
+
+| System  | Package                              |
+| ------- | ------------------------------------ |
+| Windows | `deadly-dave-windows-x86_64.zip`     |
+| macOS   | `deadly-dave-macos-universal.zip`    |
+| Linux   | `deadly-dave-linux-x86_64.tar.gz`    |
+
+SDL3 is linked statically everywhere, the C runtime is static on Windows and the
+macOS build is a universal binary. On Linux the only things used from the system
+are the C library and the video/audio libraries that every desktop already ships
+(X11 or Wayland, ALSA or PulseAudio).
+
 ### Display and aspect-ratio
 
 The game draws into a low resolution framebuffer that is always 200 pixels tall,

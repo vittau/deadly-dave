@@ -1,4 +1,8 @@
 ddave
+deadly-dave
+deadly-dave.exe
+build/
+dist/
 tests/test_invfreq
 tests/test_monster
 tests/test_display
