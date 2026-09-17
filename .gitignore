@@ -1,5 +1,7 @@
 ddave
 tests/test_invfreq
 tests/test_monster
+tests/test_display
+*.dSYM/
 
 out/**

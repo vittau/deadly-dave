@@ -7,27 +7,24 @@ find_package(OpenGL REQUIRED)
 
 
 #==============================================================
-#          SDL2
+#          SDL3
 #=============================================================
-set( SDL2_DISABLE_SDL2MAIN ON CACHE INTERNAL "Disable SDL2Main")
 set( SDL_STATIC ON CACHE BOOL "" FORCE )
 set( SDL_SHARED OFF CACHE BOOL "" FORCE )
 
 FetchContent_Declare(
-    SDL2
+    SDL3
     GIT_REPOSITORY  https://github.com/libsdl-org/SDL
-#    GIT_TAG         SDL2
-    GIT_TAG         origin/release-2.30.x
+    GIT_TAG         release-3.4.16
     GIT_SHALLOW     TRUE
 #    GIT_PROGRESS    TRUE
     OVERRIDE_FIND_PACKAGE
 )
 
-FetchContent_MakeAvailable(SDL2)
+FetchContent_MakeAvailable(SDL3)
 
-message(STATUS "SDL2 Include Dir: ${SDL2_INCLUDE_DIRS}")
-message(STATUS "SDL2 Source Dir: ${SDL2_SOURCE_DIR}")
-message(STATUS "SDL2 Binary Dir: ${SDL2_BINARY_DIR}")
+message(STATUS "SDL3 Source Dir: ${SDL3_SOURCE_DIR}")
+message(STATUS "SDL3 Binary Dir: ${SDL3_BINARY_DIR}")
 #=========================================================================
 
 
@@ -41,7 +38,7 @@ if (WIN32)
 endif()
 
 
- add_executable (deadly-dave "main.c" "game.c" "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c" "bullet.c")
+ add_executable (deadly-dave "main.c" "game.c" "display.c" "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c" "bullet.c")
 
-target_link_libraries(deadly-dave PUBLIC SDL2::SDL2-static)
+target_link_libraries(deadly-dave PUBLIC SDL3::SDL3-static)
 #set_property(TARGET deadly-dave)

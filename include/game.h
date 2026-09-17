@@ -1,7 +1,7 @@
 #ifndef _GAME_H_
 #define _GAME_H_
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include "tile.h"
 #include "dave.h"
@@ -82,6 +82,8 @@ typedef struct game_context_struct {
     int64_t scroll_remaining;
 
     uint64_t level;
+    /* Number of tile columns the loaded level actually has. */
+    uint64_t level_columns;
 
     uint64_t level_secret_state;
     uint64_t lives;

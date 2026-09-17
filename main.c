@@ -28,6 +28,8 @@ void sigseg_handler(int sig) {
 void usage() {
     printf("-w             start windowed \n");
     printf("-l <level>     start in level \n");
+    printf("\n");
+    printf("In game, F5 switches between pixel perfect scaling and filling the screen. \n");
 }
 
 int main(int argc, char **argv) {

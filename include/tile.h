@@ -12,6 +12,11 @@
 #define TILEMAP_HEIGHT 12
 #define TILEMAP_SCENE_X 0
 #define TILEMAP_SCENE_Y 0
+/*
+ * Number of columns of the classic 320 pixel wide screen. The viewport is wider
+ * than that on a wide screen, ask display_columns() for how many columns are
+ * actually on screen right now.
+ */
 #define TILEMAP_SCENE_WIDTH 20
 #define TILEMAP_SCENE_HEIGHT 12
 

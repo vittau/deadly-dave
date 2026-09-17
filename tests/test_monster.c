@@ -6,7 +6,8 @@
 #include <math.h>
 
 #define SDL_MAIN_HANDLED
-#include <SDL.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 
 #include "game.h"
 
@@ -21,7 +22,7 @@ void do_input(keys_state_t* state)
 {
     SDL_Event event;
 
-    const uint8_t *keystate = SDL_GetKeyboardState(NULL);
+    const bool *keystate = SDL_GetKeyboardState(NULL);
     state->right      = (keystate[SDL_SCANCODE_RIGHT]  != 0) ? 1 : 0;
     state->left       = (keystate[SDL_SCANCODE_LEFT]   != 0) ? 1 : 0;
     state->jump       = (keystate[SDL_SCANCODE_UP]     != 0) ? 1 : 0;
@@ -34,33 +35,33 @@ void do_input(keys_state_t* state)
 
     state->jetpack = 0;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_USEREVENT) {
+        if (event.type == SDL_EVENT_USER) {
             printf("user event \n");
-        } else if (event.type == SDL_KEYDOWN) {
+        } else if (event.type == SDL_EVENT_KEY_DOWN) {
             int is_repeat = event.key.repeat;
-            int modifier = event.key.keysym.mod;
-            int scancode = event.key.keysym.scancode;
+            int modifier = event.key.mod;
+            int scancode = event.key.scancode;
 
             printf("mod: %d, scan: %d, repeat: %d \n", modifier, scancode, is_repeat);
-            if (event.key.keysym.scancode == SDL_SCANCODE_LALT) {
+            if (event.key.scancode == SDL_SCANCODE_LALT) {
                 state->jetpack = 1;
             }
-            if (event.key.keysym.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {
+            if (event.key.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {
                 state->enter = 1;
             }
-            if (event.key.keysym.scancode == SDL_SCANCODE_RIGHTBRACKET && is_repeat == 0) {
+            if (event.key.scancode == SDL_SCANCODE_RIGHTBRACKET && is_repeat == 0) {
                 state->bracer = 1;
             }
-            if (event.key.keysym.scancode == SDL_SCANCODE_LEFTBRACKET && is_repeat == 0) {
+            if (event.key.scancode == SDL_SCANCODE_LEFTBRACKET && is_repeat == 0) {
                 state->bracel = 1;
             }
-        } else if (event.type == SDL_QUIT) {
+        } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
         }
     }
 }
 void render_tile_idx(int tile_idx, int x, int y) {
-    SDL_Surface *surface = g_assets->tiles[tile_idx];
+    SDL_Surface *surface = g_assets->imgdata[tile_idx];
 
     int blend = 0;
     if (tile_idx == SPRITE_IDX_BULLET_RIGHT || tile_idx == SPRITE_IDX_BULLET_LEFT) {
@@ -134,8 +135,8 @@ void draw_text_line(const char *line, int x, int y, SDL_Renderer *renderer) {
 
 int test_monster() {
     int32_t intro_should_finish = 0;
-    uint32_t timer_begin;
-    uint32_t timer_end;
+    uint64_t timer_begin;
+    uint64_t timer_end;
     uint32_t delay;
     int32_t result = 0;
     int stride;
@@ -232,14 +233,14 @@ int test_monster() {
 
         // Refresh screen
         SDL_UnlockTexture(g_texture);
-        SDL_RenderCopy(g_renderer, g_texture, NULL,NULL);
+        SDL_RenderTexture(g_renderer, g_texture, NULL, NULL);
         SDL_RenderPresent(g_renderer);
 
         // Wait for next frame
         timer_end = SDL_GetTicks();
         delay = 14 - (timer_end-timer_begin);
         delay = delay > 14 ? 0 : delay;
-        SDL_Delay(delay);
+        SDL_Delay((uint32_t)delay);
     }
 
     return result;
@@ -254,7 +255,7 @@ void load_assets() {
     g_assets = malloc(sizeof(struct game_assets));
 
     for (i = 0; i < 1000; i++) {
-        g_assets->tiles[i] = NULL;
+        g_assets->imgdata[i] = NULL;
     }
 
     for (i=0; i<1000; i++) {
@@ -266,7 +267,7 @@ void load_assets() {
 
         if (access(fname, F_OK) == 0) {
             surface = SDL_LoadBMP(fname);
-            g_assets->tiles[i] = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA8888, 0);
+            g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
         }
     }
 }
@@ -276,17 +277,19 @@ int main(int argc, char* argv[]) {
     const uint8_t DISPLAY_SCALE = 3;
 
     SDL_SetMainReady();
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE)) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("Failed to initialize SDL video. Error: (%s) \n", SDL_GetError());
         return -1;
     }
 
-    g_window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 600, 0);
-    g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
+    g_window = SDL_CreateWindow("", 960, 600, 0);
+    SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    g_renderer = SDL_CreateRenderer(g_window, SDL_SOFTWARE_RENDERER);
     g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_RGBA8888,
         SDL_TEXTUREACCESS_STREAMING, 320, 200);
+    SDL_SetTextureScaleMode(g_texture, SDL_SCALEMODE_NEAREST);
 
-    SDL_RenderSetScale(g_renderer, DISPLAY_SCALE, DISPLAY_SCALE);
+    SDL_SetRenderScale(g_renderer, DISPLAY_SCALE, DISPLAY_SCALE);
 
     load_assets();
 

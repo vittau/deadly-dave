@@ -6,16 +6,19 @@
 #include <math.h>
 
 #define SDL_MAIN_HANDLED
-#include <SDL.h>
+#include <SDL3/SDL.h>
+/* SDL3 no longer pulls this in through SDL.h; it is where SDL_SetMainReady lives. */
+#include <SDL3/SDL_main.h>
 
 #include "game.h"
+#include "display.h"
 #include "soundfx.h"
 
 
 SDL_Window *g_window;
 SDL_Renderer *g_renderer;
-SDL_Texture *g_texture;
 uint32_t *g_pixels;
+int g_pixels_pitch = DISPLAY_BASE_WIDTH;
 assets_t *g_assets;
 soundfx_t *g_soundfx;
 
@@ -40,24 +43,26 @@ void render_tile_idx(int tile_idx, int x, int y) {
         blend = 1;
     }
 
+    int screen_width = display_width();
+
     for (int line_idx = 0; line_idx < surface->h; line_idx++) {
         for (int column_idx = 0; column_idx < surface->w; column_idx++) {
             uint32_t pixel = ((uint32_t*)surface->pixels)[line_idx * surface->w + column_idx];
 
             if ( (pixel & 0x000000FF) == 0) { // is a pixel totally transperant dont draw it
-            } else if (line_idx + y >= 200) {
-            } else if (column_idx + x >= 320) {
+            } else if (line_idx + y >= DISPLAY_HEIGHT) {
+            } else if (column_idx + x >= screen_width) {
             } else if (column_idx + x < 0) {
             } else {
                 if ( (line_idx + y) >= 0) {
                     if (blend) {
-                        uint32_t oldpixel = g_pixels[(line_idx + y) * 320 + (column_idx + x)];
+                        uint32_t oldpixel = g_pixels[(line_idx + y) * g_pixels_pitch + (column_idx + x)];
 
                         if (oldpixel != 0x000000FF) {
                             pixel = (pixel ^ oldpixel);
                         }
                     }
-                    g_pixels[(line_idx + y) * 320 + (column_idx + x)] = pixel;
+                    g_pixels[(line_idx + y) * g_pixels_pitch + (column_idx + x)] = pixel;
                 }
             }
         }
@@ -65,8 +70,53 @@ void render_tile_idx(int tile_idx, int x, int y) {
 }
 
 void clear_screen() {
-    for (int idx = 0; idx < 320 * 200; idx++) {
-        g_pixels[idx] = 0x000000FF;
+    int screen_width = display_width();
+
+    for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
+        for (int column_idx = 0; column_idx < screen_width; column_idx++) {
+            g_pixels[line_idx * g_pixels_pitch + column_idx] = 0x000000FF;
+        }
+    }
+}
+
+/*
+ * Paints a horizontal band of the screen black. Used for the strip the score,
+ * the level number and the lives sit on: those sprites only add up to 320
+ * pixels, so on a wider screen the scene would show through between them.
+ */
+void clear_screen_band(int y, int height) {
+    int screen_width = display_width();
+
+    if (y < 0) {
+        height = height + y;
+        y = 0;
+    }
+    if ((y + height) > DISPLAY_HEIGHT) {
+        height = DISPLAY_HEIGHT - y;
+    }
+
+    for (int line_idx = y; line_idx < (y + height); line_idx++) {
+        for (int column_idx = 0; column_idx < screen_width; column_idx++) {
+            g_pixels[line_idx * g_pixels_pitch + column_idx] = 0x000000FF;
+        }
+    }
+}
+
+/*
+ * Repeats a sprite from the left to the right edge of the screen. The top and
+ * bottom bars of the HUD are 320 pixels wide but their pattern repeats every 32
+ * pixels, so they tile seamlessly over any framebuffer width.
+ */
+void render_tile_idx_row(int tile_idx, int y) {
+    SDL_Surface *surface = g_assets->imgdata[tile_idx];
+    int screen_width = display_width();
+
+    if (surface == NULL || surface->w < 1) {
+        return;
+    }
+
+    for (int x = 0; x < screen_width; x += surface->w) {
+        render_tile_idx(tile_idx, x, y);
     }
 }
 
@@ -76,6 +126,14 @@ void draw_tile_offset(tile_t *tile, int x_offset) {
 
 void draw_tile(tile_t *tile) {
     draw_tile_offset(tile, 0);
+}
+
+/*
+ * Draws a tile whose position was authored for a 320 pixel wide screen, keeping
+ * it centered when the framebuffer is wider than that.
+ */
+void draw_tile_centered(tile_t *tile) {
+    render_tile_idx(tile->get_sprite(tile), tile->x + display_center_offset(), tile->y);
 }
 
 void draw_char(char c, int x, int y, int is_black) {
@@ -135,9 +193,19 @@ void draw_popup_box(int x, int y, int rows, int columns) {
 }
 
 void draw_map(game_context_t *game, tile_t *map) {
-    for (int i = 0; i < (TILEMAP_SCENE_WIDTH * TILEMAP_SCENE_HEIGHT); i++) {
-        if (map[i + (game->scroll_offset * 12)].sprites[0] != 0) {
-            draw_tile_offset(&map[i + (game->scroll_offset*12)], game->scroll_offset);
+    int first = game->scroll_offset * TILEMAP_HEIGHT;
+    int count = display_columns() * TILEMAP_HEIGHT;
+
+    if (first < 0) {
+        first = 0;
+    }
+    if ((first + count) > (TILEMAP_WIDTH * TILEMAP_HEIGHT)) {
+        count = (TILEMAP_WIDTH * TILEMAP_HEIGHT) - first;
+    }
+
+    for (int i = 0; i < count; i++) {
+        if (map[first + i].sprites[0] != 0) {
+            draw_tile_offset(&map[first + i], game->scroll_offset);
         }
     }
 }
@@ -185,7 +253,7 @@ void draw_scrollable_area(game_context_t *game, tile_t *map) {
 void draw_x_levels_to_go(int x) {
     char good_work[128];
     snprintf(good_work, sizeof(good_work), "GOOD WORK! ONLY %d MORE TO GO!", x);
-    draw_text_line(good_work, 50, 58);
+    draw_text_line(good_work, 50 + display_center_offset(), 58);
 }
 
 void draw_jetpack(int bars) {
@@ -203,15 +271,18 @@ void draw_jetpack(int bars) {
 }
 
 void draw_level_number(int level) {
-    render_tile_idx(136, 104, 0);
-    render_tile_idx(148, 176, 0);
-    render_tile_idx(148 + level, 184, 0);
+    int offset = display_center_offset();
+
+    render_tile_idx(136, 104 + offset, 0);
+    render_tile_idx(148, 176 + offset, 0);
+    render_tile_idx(148 + level, 184 + offset, 0);
 }
 
 void draw_lives(int lives) {
-    int start_x = 256;
+    int offset = display_right_offset();
+    int start_x = 256 + offset;
 
-    render_tile_idx(135, 192, 0);
+    render_tile_idx(135, 192 + offset, 0);
 
     for (int idx = 0; (idx < (lives - 1)) && (idx < 4); idx++) {
         render_tile_idx(143, start_x + (16 * idx), 0);
@@ -228,8 +299,11 @@ void draw_score(int score) {
 }
 
 void draw_quit_popup(tile_t *flashing_cursor) {
-    draw_popup_box(88, 80, 5, 21);
-    draw_text_line_black("QUIT? (Y OR N):", 104, 98);
+    int offset = display_center_offset();
+
+    draw_popup_box(88 + offset, 80, 5, 21);
+    draw_text_line_black("QUIT? (Y OR N):", 104 + offset, 98);
+    flashing_cursor->x = 224 + offset;
     draw_tile(flashing_cursor);
     flashing_cursor->tick(flashing_cursor);
 }
@@ -237,7 +311,7 @@ void draw_quit_popup(tile_t *flashing_cursor) {
 void unload_assets(assets_t *assets) {
     for (int i = 0; i < 1000; i++) {
         if (assets->imgdata[i] != NULL) {
-            SDL_FreeSurface(assets->imgdata[i]);
+            SDL_DestroySurface(assets->imgdata[i]);
             assets->imgdata[i] = NULL;
         }
     }
@@ -253,8 +327,8 @@ int load_assets() {
         snprintf(fname, sizeof(fname), "res/tiles/tile%u.bmp", i);
         if (access(fname, 0) == 0) {
             SDL_Surface *surface = SDL_LoadBMP(fname);
-            g_assets->imgdata[i] = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA8888, 0);
-            SDL_FreeSurface(surface);
+            g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
+            SDL_DestroySurface(surface);
         }
     }
 
@@ -275,6 +349,7 @@ void init_game(game_context_t *game) {
     game->bullet = NULL;
     game->in_warp = WARP_NONE;
     game->level = 1;
+    game->level_columns = TILEMAP_WIDTH;
     game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
 
     tile_create_flashing_cursor(&game->flashing_cursor, 224, 96);
@@ -291,7 +366,7 @@ void init_game(game_context_t *game) {
 void get_keys(keys_state_t* state) {
     SDL_Event event;
 
-    const uint8_t *keystate = SDL_GetKeyboardState(NULL);
+    const bool *keystate = SDL_GetKeyboardState(NULL);
     state->right      = (keystate[SDL_SCANCODE_RIGHT]  != 0) ? 1 : 0;
     state->left       = (keystate[SDL_SCANCODE_LEFT]   != 0) ? 1 : 0;
     state->jump       = (keystate[SDL_SCANCODE_UP]     != 0) ? 1 : 0;
@@ -304,29 +379,32 @@ void get_keys(keys_state_t* state) {
 
     state->jetpack = 0;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_USEREVENT) {
+        if (event.type == SDL_EVENT_USER) {
             printf("user event \n");
 
-        } else if (event.type == SDL_KEYDOWN) {
+        } else if (event.type == SDL_EVENT_KEY_DOWN) {
             int is_repeat = event.key.repeat;
-            //int modifier = event.key.keysym.mod;
-            //int scancode = event.key.keysym.scancode;
+            //int modifier = event.key.mod;
+            //int scancode = event.key.scancode;
             //printf("mod: %d, scan: %d, repeat: %d \n", modifier, scancode, is_repeat);
-            if (event.key.keysym.scancode == SDL_SCANCODE_LALT) {
+            if (event.key.scancode == SDL_SCANCODE_LALT) {
                 state->jetpack = 1;
             }
-            if (event.key.keysym.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {
+            if (event.key.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {
                 state->enter = 1;
             }
-            if (event.key.keysym.scancode == SDL_SCANCODE_RIGHTBRACKET && is_repeat == 0) {
+            if (event.key.scancode == SDL_SCANCODE_F5 && is_repeat == 0) {
+                display_toggle_scale_mode();
+            }
+            if (event.key.scancode == SDL_SCANCODE_RIGHTBRACKET && is_repeat == 0) {
                 printf("BR \n");
                 state->bracer = 1;
             }
-            if (event.key.keysym.scancode == SDL_SCANCODE_LEFTBRACKET && is_repeat == 0) {
+            if (event.key.scancode == SDL_SCANCODE_LEFTBRACKET && is_repeat == 0) {
                 printf("BL \n");
                 state->bracel = 1;
             }
-        } else if (event.type == SDL_QUIT) {
+        } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
         }
     }
@@ -346,14 +424,13 @@ int is_any_key_pressed(keys_state_t* key_state) {
 
 void start_intro() {
     int32_t intro_should_finish = 0;
-    uint32_t timer_begin;
-    uint32_t timer_end;
-    uint32_t delay;
-    int stride;
+    uint64_t timer_begin;
+    uint64_t timer_end;
+    uint64_t delay;
 
     keys_state_t key_state = {0, 0, 0, 0, 0, 0, 0, 0};
     // Clear screen
-    SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0x00);
+    SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(g_renderer);
 
     // This will consume all keys waiting prior such as the enter starting the game
@@ -425,32 +502,39 @@ void start_intro() {
             intro_should_finish = 1;
         }
 
-        SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0x00);
+        SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(g_renderer);
-        SDL_LockTexture(g_texture, NULL, (void*)&g_pixels, &stride);
+        display_sync();
+        g_pixels = display_lock(&g_pixels_pitch);
+        if (g_pixels == NULL) {
+            return;
+        }
 
         clear_screen();
 
+        // The intro screen is a fixed 320 pixel wide picture, so it is centered
+        // instead of being spread over the whole framebuffer.
+        int offset = display_center_offset();
+
         // Draw all tiles
         for (int idx = 0; idx < 41; idx++) {
-            draw_tile(&block[idx]);
+            draw_tile_centered(&block[idx]);
             block[idx].tick(&block[idx]);
         }
 
-        draw_text_line("BY JOHN ROMERO", 110, 50);
-        draw_text_line("(C) 1990 SOFTDISK, INC.", 79, 57);
-        draw_text_line("                         ",72, 166);
-        draw_text_line("PRESS THE F1 KEY FOR HELP", 72, 168);
-        draw_text_line("                         ",72, 174);
+        draw_text_line("BY JOHN ROMERO", 110 + offset, 50);
+        draw_text_line("(C) 1990 SOFTDISK, INC.", 79 + offset, 57);
+        draw_text_line("                         ", 72 + offset, 166);
+        draw_text_line("PRESS THE F1 KEY FOR HELP", 72 + offset, 168);
+        draw_text_line("                         ", 72 + offset, 174);
 
-        SDL_UnlockTexture(g_texture);
-        SDL_RenderCopy(g_renderer, g_texture, NULL,NULL);
-        SDL_RenderPresent(g_renderer);
+        display_unlock();
+        display_present();
 
         timer_end = SDL_GetTicks();
         delay = 14 - (timer_end-timer_begin);
         delay = delay > 14 ? 0 : delay;
-        SDL_Delay(delay);
+        SDL_Delay((uint32_t)delay);
     }
 }
 
@@ -512,6 +596,21 @@ int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *keys) {
  *  +-------------------+                 +--------------------+
  */
 int game_adjust_scroll_to_dave(game_context_t *game, dave_t *dave) {
+    int screen_width = display_width();
+    /*
+     * Last column the viewport may start at, so that it never scrolls past the
+     * end of the level. The wider the screen the more columns are on it, and
+     * the window can be resized while playing, so it is recomputed every frame.
+     */
+    int max_offset = (int)game->level_columns - display_columns();
+
+    if (max_offset < 0) {
+        max_offset = 0;
+    }
+    if (game->scroll_offset > max_offset) {
+        game->scroll_offset = max_offset;
+    }
+
     /* Here we still have scrolling to do so we just scroll the screen a bit */
     if (game->scroll_remaining != 0) {
         if (game->scroll_remaining > 0) {
@@ -533,9 +632,9 @@ int game_adjust_scroll_to_dave(game_context_t *game, dave_t *dave) {
      */
     else {
         int delta = (game->dave->tile->x - (game->scroll_offset * 16));
-        if (delta > 320 - (16 + 16 + 8) && game->scroll_offset < 80) {
-            if ((80 -  game->scroll_offset) < 15) {
-                game->scroll_remaining = (80 - game->scroll_offset);
+        if (delta > screen_width - (16 + 16 + 8) && game->scroll_offset < max_offset) {
+            if ((max_offset -  game->scroll_offset) < 15) {
+                game->scroll_remaining = (max_offset - game->scroll_offset);
             } else {
                 game->scroll_remaining = 15;
             }
@@ -574,7 +673,7 @@ void game_do_plasmas(game_context_t *game, tile_t *map, keys_state_t *keys) {
                     plasma_destroy(game->monsters[i]->plasma);
                     game->monsters[i]->plasma = NULL;
                 } else {
-                    game->monsters[i]->plasma->tick(game->monsters[i]->plasma, map, (game->scroll_offset * 16) - 80, (game->scroll_offset * 16) + 400);
+                    game->monsters[i]->plasma->tick(game->monsters[i]->plasma, map, (game->scroll_offset * 16) - 80, (game->scroll_offset * 16) + display_width() + 80);
                 }
             }
         }
@@ -583,7 +682,7 @@ void game_do_plasmas(game_context_t *game, tile_t *map, keys_state_t *keys) {
 
 void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
     if (game->bullet != NULL) {
-        game->bullet->tick(game->bullet, map, (game->scroll_offset * 16), (game->scroll_offset * 16) + 320);
+        game->bullet->tick(game->bullet, map, (game->scroll_offset * 16), (game->scroll_offset * 16) + display_width());
 
         if (game->bullet->is_dead(game->bullet)) {
             bullet_destroy(game->bullet);
@@ -603,12 +702,15 @@ void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *keys) {
 }
 
 void draw_level_frame(game_context_t *game) {
-    draw_tile(&game->bottom_separator);
-    draw_tile(&game->top_separator);
+    clear_screen_band(0, game->top_separator.y);
+    render_tile_idx_row(game->bottom_separator.sprites[0], game->bottom_separator.y);
+    render_tile_idx_row(game->top_separator.sprites[0], game->top_separator.y);
     if (game->dave->has_trophy) {
+        game->grail_banner.x = 70 + display_center_offset();
         draw_tile(&game->grail_banner);
     }
     if (game->dave->has_gun) {
+        game->gun_banner.x = 240 + display_right_offset();
         draw_tile(&game->gun_banner);
     }
     if (game->dave->jetpack_bars > 0) {
@@ -902,7 +1004,7 @@ int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         return G_STATE_NONE;
     }
 
-    if (game->dave->tile->x > 300) {
+    if (game->dave->tile->x > (display_width() - 20)) {
         if (game->level_secret_state == SECRET_LEVEL_ENTER) {
             game->level_secret_state = SECRET_LEVEL_VISITED;
         } else {
@@ -928,8 +1030,8 @@ int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
         tile_t warp_label;
         tile_t zone_label;
 
-        tile_create_label_warp(&warp_label, 32, 92);
-        tile_create_label_zone(&zone_label, 200, 92);
+        tile_create_label_warp(&warp_label, 32 + display_center_offset(), 92);
+        tile_create_label_zone(&zone_label, 200 + display_center_offset(), 92);
         draw_tile(&warp_label);
         draw_tile(&zone_label);
     } else {
@@ -1034,6 +1136,9 @@ int game_level_load(game_context_t *game, tile_t *map, char *file) {
     }
 
     free(buf);
+
+    game->level_columns = (cur_col > 0 && cur_col <= TILEMAP_WIDTH) ? (uint64_t)cur_col : TILEMAP_WIDTH;
+
     return 0;
 }
 
@@ -1048,15 +1153,14 @@ int gameloop(int starting_level) {
     tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT];
     keys_state_t key_state = {0, 0, 0, 0, 0, 0, 0, 0};
     char level_path[4096];
-    int stride;
 
     int state = G_STATE_NONE;
     int next_state;
 
-    uint32_t timer_begin;
-    uint32_t timer_end;
-    uint32_t delay;
-    int tick_interval = 14;
+    uint64_t timer_begin;
+    uint64_t timer_end;
+    uint64_t delay;
+    uint64_t tick_interval = 14;
 
     game = malloc(sizeof(game_context_t));
     init_game(game);
@@ -1064,9 +1168,18 @@ int gameloop(int starting_level) {
 
     while (1) {
         timer_begin = SDL_GetTicks();
-        SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0x00);
+        SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(g_renderer);
-        SDL_LockTexture(g_texture, NULL, (void*)&g_pixels, &stride);
+
+        // Picks up window resizes and aspect-ratio changes before anything is drawn
+        display_sync();
+
+        g_pixels = display_lock(&g_pixels_pitch);
+        if (g_pixels == NULL) {
+            clear_gameloop(game);
+            free(game);
+            return 1;
+        }
 
         get_keys(&key_state);
 
@@ -1121,13 +1234,13 @@ int gameloop(int starting_level) {
             next_state = game_warp_popup(game, map, &key_state);
 
         } else if (state == G_STATE_GAMEOVER) {
-            SDL_UnlockTexture(g_texture);
+            display_unlock();
             clear_gameloop(game);
             free(game);
             return 2;
 
         } else if (state == G_STATE_QUIT_NOW) {
-            SDL_UnlockTexture(g_texture);
+            display_unlock();
             clear_gameloop(game);
             free(game);
             return 1;
@@ -1136,15 +1249,14 @@ int gameloop(int starting_level) {
         state = next_state;
 
         // Render screen
-        SDL_UnlockTexture(g_texture);
-        SDL_RenderCopy(g_renderer, g_texture, NULL, NULL);
-        SDL_RenderPresent(g_renderer);
+        display_unlock();
+        display_present();
 
         // Wait for the next tick
         timer_end = SDL_GetTicks();
         delay = tick_interval - (timer_end-timer_begin);
         delay = delay > tick_interval ? 0 : delay;
-        SDL_Delay(delay);
+        SDL_Delay((uint32_t)delay);
     }
 
     return 0;
@@ -1152,41 +1264,64 @@ int gameloop(int starting_level) {
 
 int game_main(int is_windowed, int starting_level) {
     int ret = 0;
-    SDL_AudioSpec audio_spec_want, audio_spec;
-    const uint8_t DISPLAY_SCALE = 3;
-
-    SDL_zero(audio_spec_want);
-    SDL_zero(audio_spec);
+    const int windowed_scale = 3;
 
     SDL_SetMainReady();
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE)) {
+    /* SDL3 returns true on success, and dropped SDL_INIT_NOPARACHUTE. */
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("Failed to initialize SDL video. Error: (%s) \n", SDL_GetError());
         return -1;
     }
 
     // This might start audio for some Intel Display Audio Drivers in Windows
-    // SDL_setenv("SDL_AUDIODRIVER", "directsound", 1);
+    // SDL_setenv_unsafe("SDL_AUDIODRIVER", "directsound", 1);
 
-    if (SDL_Init(SDL_INIT_AUDIO)) {
+    if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
         printf("Failed to initialize SDL audio. Error: (%s) \n", SDL_GetError());
         return -2;
     }
 
+    /*
+     * SDL3 takes no position here: a windowed run is centered afterwards, and a
+     * plain SDL_WINDOW_FULLSCREEN with no mode set is the old fullscreen desktop.
+     */
     if (is_windowed) {
-        g_window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 600,  0 );
+        g_window = SDL_CreateWindow("",
+            DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
+            SDL_WINDOW_RESIZABLE);
     } else {
-        g_window = SDL_CreateWindow("", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 960, 600,  SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_RESIZABLE);
+        g_window = SDL_CreateWindow("",
+            DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
+            SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE);
     }
 
-    g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
-    g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 320, 200);
+    if (g_window == NULL) {
+        printf("Failed to create the window. Error: (%s) \n", SDL_GetError());
+        return -4;
+    }
 
-    SDL_RenderSetScale(g_renderer, DISPLAY_SCALE, DISPLAY_SCALE);
+    if (is_windowed) {
+        SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    }
+
+    SDL_SetWindowMinimumSize(g_window, DISPLAY_BASE_WIDTH, DISPLAY_HEIGHT);
+
+    g_renderer = SDL_CreateRenderer(g_window, SDL_SOFTWARE_RENDERER);
+
+    if (g_renderer == NULL) {
+        printf("Failed to create the renderer. Error: (%s) \n", SDL_GetError());
+        return -5;
+    }
+
+    if (display_init(g_renderer, DISPLAY_SCALE_PIXEL_PERFECT) != 0) {
+        printf("Failed to initialize the display. \n");
+        return -3;
+    }
 
     // Flush any pre-pressed keys
-    SDL_FlushEvent(SDL_KEYDOWN);
-    SDL_FlushEvent(SDL_MOUSEBUTTONDOWN);
-    SDL_FlushEvent(SDL_MOUSEMOTION);
+    SDL_FlushEvent(SDL_EVENT_KEY_DOWN);
+    SDL_FlushEvent(SDL_EVENT_MOUSE_BUTTON_DOWN);
+    SDL_FlushEvent(SDL_EVENT_MOUSE_MOTION);
 
     load_assets();
     g_soundfx = soundfx_create();
@@ -1202,7 +1337,7 @@ int game_main(int is_windowed, int starting_level) {
             printf("bye bye \n");
             soundfx_destroy(g_soundfx);
             unload_assets(g_assets);
-            SDL_DestroyTexture(g_texture);
+            display_quit();
             SDL_Quit();
             return 0;
         } else if (ret == 2) {

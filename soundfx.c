@@ -5,12 +5,12 @@
 #ifndef SDL_MAIN_HANDLED
 #define SDL_MAIN_HANDLED
 #endif
-#include <SDL.h>
+#include <SDL3/SDL.h>
 
 #include "soundfx.h"
 #include "invfreq.h"
 
-SDL_AudioDeviceID g_audio_dev;
+SDL_AudioStream *g_audio_stream;
 
 // SPEED TOJETPACK: 0x0A
 // SPEED HITWALL: 0x0A
@@ -476,42 +476,65 @@ uint16_t tojetpack[] = {
 
 void soundfx_play(soundfx_t *sfx, int tune) {
     //printf("[soundfx] soundfx_play tune: %d \n", tune);
+
+    /* The callback reads both fields from the audio thread. */
+    SDL_LockAudioStream(g_audio_stream);
     sfx->tune_idx = tune;
     sfx->tune_offset = 0;
-    SDL_PauseAudioDevice(g_audio_dev, 0);
+    SDL_UnlockAudioStream(g_audio_stream);
+
+    SDL_ResumeAudioStreamDevice(g_audio_stream);
 }
 
 void soundfx_resume(soundfx_t *sfx) {
     //printf("[soundfx] resume \n");
-    SDL_PauseAudioDevice(g_audio_dev, 0);
+    SDL_ResumeAudioStreamDevice(g_audio_stream);
 }
 
 void soundfx_stop(soundfx_t *sfx) {
     //printf("[soundfx] stop \n");
-    SDL_PauseAudioDevice(g_audio_dev, 1);
+    SDL_PauseAudioStreamDevice(g_audio_stream);
 }
 
-void game_audio_callback(void *data, uint8_t* stream, int len) {
+/*
+ * SDL3 asks for as much data as it needs instead of handing over a buffer to
+ * fill, so only the bytes left in the tune are queued, never past its end.
+ *
+ * The stream lock is already held when this runs, so the tune state can be read
+ * and written directly. When the tune runs out nothing is queued and SDL plays
+ * silence: the device is deliberately left running, because pausing it from
+ * inside the callback would take the device lock this thread already holds.
+ */
+void SDLCALL game_audio_callback(void *data, SDL_AudioStream *stream,
+        int additional_amount, int total_amount) {
     soundfx_t *sfx = (soundfx_t *)data;
+    soundfx_tune_t *tune = &sfx->tunes[sfx->tune_idx];
+    int amount;
 
-    //printf("audio callback len: %d , tune: %d \n", len, sfx->tune_idx);
-    if (sfx->tune_offset <= sfx->tunes[sfx->tune_idx].sz) {
-        //printf("Playing tune: %d, offset: %d out of %lu \n", sfx->tune_idx, sfx->tune_offset,
-        //        sfx->tunes[sfx->tune_idx].sz);
-        memcpy(stream, &sfx->tunes[sfx->tune_idx].raw[sfx->tune_offset], len);
-        sfx->tune_offset += len;
+    (void)total_amount;
+
+    if (additional_amount <= 0) {
+        return;
     }
-    else {
-        sfx->tune_idx = 0;
+
+    if ((uint64_t)sfx->tune_offset >= tune->sz) {
+        sfx->tune_idx = TUNE_SILENCE;
         sfx->tune_offset = 0;
-        SDL_PauseAudioDevice(g_audio_dev, 1);
+        return;
     }
-    return;
+
+    amount = (int)(tune->sz - (uint64_t)sfx->tune_offset);
+    if (amount > additional_amount) {
+        amount = additional_amount;
+    }
+
+    SDL_PutAudioStreamData(stream, &tune->raw[sfx->tune_offset], amount);
+    sfx->tune_offset += amount;
 }
 
 soundfx_t* soundfx_create() {
     soundfx_t *sfx = malloc(sizeof(soundfx_t));
-    SDL_AudioSpec audio_spec_want, audio_spec;
+    SDL_AudioSpec audio_spec;
 
     strcpy(sfx->tunes[0].name, "silence");
     sfx->tunes[0].raw = malloc(4096 * 512);
@@ -578,26 +601,30 @@ soundfx_t* soundfx_create() {
     sfx->resume = &soundfx_resume;
 
     // Init SDL
-    audio_spec_want.freq = 44100;
-    audio_spec_want.format = AUDIO_S16LSB;
-    audio_spec_want.channels = 1;
-    audio_spec_want.samples = 1024;
-    audio_spec_want.callback = &game_audio_callback;
-    audio_spec_want.userdata = (void*)sfx;
+    audio_spec.freq = 44100;
+    audio_spec.format = SDL_AUDIO_S16LE;
+    audio_spec.channels = 1;
 
-    g_audio_dev = SDL_OpenAudioDevice(NULL, 0,
-            &audio_spec_want, &audio_spec, SDL_AUDIO_ALLOW_ANY_CHANGE);
-    if (g_audio_dev == 0) {
-        printf("Failed to open audio device \n");
+    /*
+     * SDL3 opens the device paused and converts whatever the hardware needs,
+     * so the game keeps handing it the same mono 16 bit samples as before.
+     */
+    g_audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+            &audio_spec, &game_audio_callback, (void*)sfx);
+    if (g_audio_stream == NULL) {
+        printf("Failed to open audio device. Error: (%s) \n", SDL_GetError());
         return NULL;
     }
-    SDL_PauseAudioDevice(g_audio_dev, 1);
 
     return sfx;
 }
 
 void soundfx_destroy(soundfx_t *sfx)
 {
+    /* Closes the device first, so the callback can no longer read what follows. */
+    SDL_DestroyAudioStream(g_audio_stream);
+    g_audio_stream = NULL;
+
     free(sfx->tunes[0].raw);
     free(sfx->tunes[1].raw);
     free(sfx->tunes[2].raw);
@@ -612,5 +639,4 @@ void soundfx_destroy(soundfx_t *sfx)
     free(sfx->tunes[11].raw);
     free(sfx->tunes[12].raw);
     free(sfx);
-    SDL_CloseAudioDevice(g_audio_dev);
 }
