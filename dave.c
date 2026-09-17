@@ -134,7 +134,7 @@ static void dave_state_walking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TI
             return;
         } else {
             dave->tile->x-=1;
-            if (dave->jump_cooldown_count == 0 && !key_up) {
+            if (dave->jump_cooldown_count == 0) {
                 if (dave->mute == 0)
                     dave->sfx->play(dave->sfx, TUNE_WALKING);
             }
@@ -151,7 +151,7 @@ static void dave_state_walking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TI
             dave_state_standing_enter(dave, map, key_left, key_right, key_up);
             return;
         } else {
-            if (dave->jump_cooldown_count == 0 && !key_up) {
+            if (dave->jump_cooldown_count == 0) {
                 if (dave->mute == 0)
                     dave->sfx->play(dave->sfx, TUNE_WALKING);
             }
