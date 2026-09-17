@@ -10,7 +10,11 @@
 
 typedef struct monster_struct {
     int state;
-    int route[256];
+    /*
+     * The patrol route as x,y pairs, copied from the monster's path table. The
+     * longest route is Spidy's 102 ints, so 128 holds every one of them.
+     */
+    int route[128];
     int route_sz;
     int route_idx;
     int cooldown;

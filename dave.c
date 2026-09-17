@@ -316,7 +316,7 @@ static void dave_state_walking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * 
 static void dave_state_jumping_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_jetpack) {
 
-    int jump_velocity_table[95] = {
+    static const int jump_velocity_table[95] = {
             -1,  0, -2,  0, -3,  0, -2,  0, -2,  0,
             -2,  0, -2,  0, -2,  0, -2,  0, -2,  0,
             -2,  0, -1,  0, -2,  0, -1,  0, -1,  0,

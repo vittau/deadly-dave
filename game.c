@@ -118,6 +118,22 @@ static void render_tile_idx(int tile_idx, int x, int y) {
 
     int blend = g_blended[tile_idx];
     int screen_width = display_width();
+    int col_begin = 0;
+    int col_end = surface->w;
+
+    /*
+     * Clip the horizontal span once: every row writes the same columns, so the
+     * per-pixel range test the inner loop used to run is not needed any more.
+     */
+    if (x < 0) {
+        col_begin = -x;
+    }
+    if (x + surface->w > screen_width) {
+        col_end = screen_width - x;
+    }
+    if (col_begin >= col_end) {
+        return;
+    }
 
     for (int line_idx = 0; line_idx < surface->h; line_idx++) {
         int dst_y = y + line_idx;
@@ -130,14 +146,10 @@ static void render_tile_idx(int tile_idx, int x, int y) {
             (size_t)line_idx * (size_t)surface->pitch);
         uint32_t *dst = g_pixels + (size_t)dst_y * (size_t)g_pixels_pitch;
 
-        for (int column_idx = 0; column_idx < surface->w; column_idx++) {
+        for (int column_idx = col_begin; column_idx < col_end; column_idx++) {
             int dst_x = x + column_idx;
-            uint32_t pixel;
+            uint32_t pixel = src[column_idx];
 
-            if (dst_x < 0 || dst_x >= screen_width) {
-                continue;
-            }
-            pixel = src[column_idx];
             if ((pixel & 0x000000FF) == 0) { // a fully transparent pixel is not drawn
                 continue;
             }
@@ -162,11 +174,8 @@ static void render_tile_idx(int tile_idx, int x, int y) {
 }
 
 static void clear_screen(void) {
-    int screen_width = display_width();
-
-    for (int line_idx = 0; line_idx < DISPLAY_HEIGHT; line_idx++) {
-        SDL_memset4(g_pixels + line_idx * g_pixels_pitch, 0x000000FF, (size_t)screen_width);
-    }
+    /* The framebuffer is one contiguous block whose stride is the screen width. */
+    SDL_memset4(g_pixels, 0x000000FF, (size_t)display_width() * DISPLAY_HEIGHT);
 }
 
 /*
@@ -184,10 +193,12 @@ static void clear_screen_band(int y, int height) {
     if ((y + height) > DISPLAY_HEIGHT) {
         height = DISPLAY_HEIGHT - y;
     }
-
-    for (int line_idx = y; line_idx < (y + height); line_idx++) {
-        SDL_memset4(g_pixels + line_idx * g_pixels_pitch, 0x000000FF, (size_t)screen_width);
+    if (height <= 0) {
+        return;
     }
+
+    /* Rows are contiguous, so the band is a single run. */
+    SDL_memset4(g_pixels + y * g_pixels_pitch, 0x000000FF, (size_t)screen_width * height);
 }
 
 /*
@@ -338,25 +349,33 @@ static void draw_bullet_offset(bullet_t *bullet, int view_x) {
 }
 
 static void draw_dave_offset(dave_t *dave, int view_x) {
-    if (dave->tile->get_sprite(dave->tile) != 0) {
-        draw_tile_offset(dave->tile, view_x);
+    int sprite = dave->tile->get_sprite(dave->tile);
+
+    if (sprite != 0) {
+        render_tile_idx(sprite, dave->tile->x - view_x, dave->tile->y);
     }
 }
 
 static void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], int view_x) {
     for (int i = 0; i < MAX_MONSTERS; i++) {
+        tile_t *tile;
+        int sprite;
+
         if (monsters[i] == NULL) {
             continue;
         }
-        if  (monsters[i]->tile->get_sprite(monsters[i]->tile) != 0) {
-                render_tile_idx(monsters[i]->tile->get_sprite(monsters[i]->tile),
-                    monsters[i]->tile->x - view_x, monsters[i]->tile->y);
+
+        tile = monsters[i]->tile;
+        sprite = tile->get_sprite(tile);
+        if (sprite != 0) {
+            render_tile_idx(sprite, tile->x - view_x, tile->y);
         }
+
         if (monsters[i]->plasma != NULL) {
-            int sprite = monsters[i]->plasma->get_sprite(monsters[i]->plasma);
+            tile = monsters[i]->plasma->tile;
+            sprite = monsters[i]->plasma->get_sprite(monsters[i]->plasma);
             if (sprite != 0) {
-                render_tile_idx(monsters[i]->plasma->get_sprite(monsters[i]->plasma),
-                    monsters[i]->plasma->tile->x - view_x, monsters[i]->plasma->tile->y);
+                render_tile_idx(sprite, tile->x - view_x, tile->y);
             }
         }
     }
