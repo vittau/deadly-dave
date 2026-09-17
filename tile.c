@@ -1,7 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 #include "tile.h"
 
 
@@ -742,103 +738,167 @@ static void tile_create_grail(tile_t *t, int x, int y) {
     t->is_inside = &tile_is_inside;
 }
 
+/*
+ * A .ddt tag is always exactly three characters, so pack them into one key and
+ * switch on that instead of running a strcmp chain per tile (about 1100 tiles
+ * per level load). The macro keeps the cases readable as the tags themselves.
+ */
+#define TAG_KEY(a, b, c) (((unsigned)(unsigned char)(a) << 16) | \
+                          ((unsigned)(unsigned char)(b) << 8)  | \
+                           (unsigned)(unsigned char)(c))
+
 void tile_create(tile_t* t, char tag[4], int x, int y) {
-    if (strcmp(tag, "RBK") == 0) {
+    switch (TAG_KEY(tag[0], tag[1], tag[2])) {
+    case TAG_KEY('R', 'B', 'K'):
         tile_create_block(t, SPRITE_IDX_RED_BRICK, x, y, 16, 16);
-    } else if (strcmp(tag, "BBK") == 0) {
+        break;
+    case TAG_KEY('B', 'B', 'K'):
         tile_create_block(t, SPRITE_IDX_BLUE_BRICK, x, y, 16, 16);
-    } else if (strcmp(tag, "PPK") == 0) {
+        break;
+    case TAG_KEY('P', 'P', 'K'):
         tile_create_block(t, SPRITE_IDX_PURPLE_PLATFORM, x, y, 16, 16);
-    } else if (strcmp(tag, "PPF") == 0) {
+        break;
+    case TAG_KEY('P', 'P', 'F'):
         tile_create_frail(t, SPRITE_IDX_PURPLE_FAKE, x, y, 16, 16);
-    } else if (strcmp(tag, "PCK") == 0) {
+        break;
+    case TAG_KEY('P', 'C', 'K'):
         tile_create_block(t, SPRITE_IDX_PURPLE_COLUMN, x, y, 16, 16);
-    } else if (strcmp(tag, "DRT") == 0) {
+        break;
+    case TAG_KEY('D', 'R', 'T'):
         tile_create_block(t, SPRITE_IDX_DIRT, x, y, 16, 16);
-    } else if (strcmp(tag, "BIM") == 0) {
+        break;
+    case TAG_KEY('B', 'I', 'M'):
         tile_create_block(t, SPRITE_IDX_METAL_BEAM, x, y, 16, 16);
-    } else if (strcmp(tag, "DRB") == 0) {
+        break;
+    case TAG_KEY('D', 'R', 'B'):
         tile_create_block(t, SPRITE_IDX_DIRT_BLOOD, x, y, 16, 16);
-    } else if (strcmp(tag, "BCM") == 0) {
+        break;
+    case TAG_KEY('B', 'C', 'M'):
         tile_create_block(t, SPRITE_IDX_BLUE_COLUMN, x, y, 16, 16);
-    } else if (strcmp(tag, "PIR") == 0) {
+        break;
+    case TAG_KEY('P', 'I', 'R'):
         tile_create_block(t, SPRITE_IDX_PIPE_RIGHT, x, y, 16, 16);
-    } else if (strcmp(tag, "PID") == 0) {
+        break;
+    case TAG_KEY('P', 'I', 'D'):
         tile_create_block(t, SPRITE_IDX_PIPE_DOWN, x, y, 16, 16);
-    } else if (strcmp(tag, " X ") == 0) {
+        break;
+    case TAG_KEY(' ', 'X', ' '):
         tile_create_door(t, SPRITE_IDX_DOOR, x, y, 16, 16);
-    } else if (strcmp(tag, "GUN") == 0) {
+        break;
+    case TAG_KEY('G', 'U', 'N'):
         tile_create_gun(t, SPRITE_IDX_GUN, x, y, 16, 16);
-    } else if (strcmp(tag, "JPK") == 0) {
+        break;
+    case TAG_KEY('J', 'P', 'K'):
         tile_create_jetpack(t, SPRITE_IDX_JETPACK, x, y, 16, 16);
-    } else if (strcmp(tag, " * ") == 0) {
+        break;
+    case TAG_KEY(' ', '*', ' '):
         tile_create_purple_gem(t, x, y);
-    } else if (strcmp(tag, " v ") == 0) {
+        break;
+    case TAG_KEY(' ', 'v', ' '):
         tile_create_teal_gem(t, x, y);
-    } else if (strcmp(tag, " V ") == 0) {
+        break;
+    case TAG_KEY(' ', 'V', ' '):
         tile_create_red_gem(t, x, y);
-    } else if (strcmp(tag, " O ") == 0) {
+        break;
+    case TAG_KEY(' ', 'O', ' '):
         tile_create_ring(t, x, y);
-    } else if (strcmp(tag, " W ") == 0) {
+        break;
+    case TAG_KEY(' ', 'W', ' '):
         tile_create_crown(t, x, y);
-    } else if (strcmp(tag, " ! ") == 0) {
+        break;
+    case TAG_KEY(' ', '!', ' '):
         tile_create_scepter(t, x, y);
-    } else if (strcmp(tag, " Y ") == 0) {
+        break;
+    case TAG_KEY(' ', 'Y', ' '):
         tile_create_grail(t, x, y);
-    } else if (strcmp(tag, "FR1") == 0) {
+        break;
+    case TAG_KEY('F', 'R', '1'):
         tile_create_fire(t, x, y, 0);
-    } else if (strcmp(tag, "FR2") == 0) {
+        break;
+    case TAG_KEY('F', 'R', '2'):
         tile_create_fire(t, x, y, 1);
-    } else if (strcmp(tag, "FR3") == 0) {
+        break;
+    case TAG_KEY('F', 'R', '3'):
         tile_create_fire(t, x, y, 2);
-    } else if (strcmp(tag, "FR4") == 0) {
+        break;
+    case TAG_KEY('F', 'R', '4'):
         tile_create_fire(t, x, y, 3);
-    } else if (strcmp(tag, "WT1") == 0) {
+        break;
+    case TAG_KEY('W', 'T', '1'):
         tile_create_water(t, x, y, 0);
-    } else if (strcmp(tag, "WT2") == 0) {
+        break;
+    case TAG_KEY('W', 'T', '2'):
         tile_create_water(t, x, y, 1);
-    } else if (strcmp(tag, "WT3") == 0) {
+        break;
+    case TAG_KEY('W', 'T', '3'):
         tile_create_water(t, x, y, 2);
-    } else if (strcmp(tag, "WT4") == 0) {
+        break;
+    case TAG_KEY('W', 'T', '4'):
         tile_create_water(t, x, y, 3);
-    } else if (strcmp(tag, "WT5") == 0) {
+        break;
+    case TAG_KEY('W', 'T', '5'):
         tile_create_water(t, x, y, 4);
-    } else if (strcmp(tag, "VI1") == 0) {
+        break;
+    case TAG_KEY('V', 'I', '1'):
         tile_create_vines(t, x, y, 0);
-    } else if (strcmp(tag, "VI2") == 0) {
+        break;
+    case TAG_KEY('V', 'I', '2'):
         tile_create_vines(t, x, y, 1);
-    } else if (strcmp(tag, "VI3") == 0) {
+        break;
+    case TAG_KEY('V', 'I', '3'):
         tile_create_vines(t, x, y, 2);
-    } else if (strcmp(tag, "VI4") == 0) {
+        break;
+    case TAG_KEY('V', 'I', '4'):
         tile_create_vines(t, x, y, 3);
-    } else if (strcmp(tag, "DR1") == 0) {
+        break;
+    case TAG_KEY('D', 'R', '1'):
         tile_create_block(t, SPRITE_IDX_DIRT_TOP_RIGHT, x, y, 16, 16);
-    } else if (strcmp(tag, "DR2") == 0) {
+        break;
+    case TAG_KEY('D', 'R', '2'):
         tile_create_block(t, SPRITE_IDX_DIRT_BOTTOM_RIGHT, x, y, 16, 16);
-    } else if (strcmp(tag, "DR3") == 0) {
+        break;
+    case TAG_KEY('D', 'R', '3'):
         tile_create_block(t, SPRITE_IDX_DIRT_BOTTOM_LEFT, x, y, 16, 16);
-    } else if (strcmp(tag, "DR4") == 0) {
+        break;
+    case TAG_KEY('D', 'R', '4'):
         tile_create_block(t, SPRITE_IDX_DIRT_TOP_LEFT, x, y, 16, 16);
-    } else if ((strcmp(tag, "  M") == 0) || (strcmp(tag, "D+M") == 0)) {
+        break;
+    case TAG_KEY(' ', ' ', 'M'):
+    case TAG_KEY('D', '+', 'M'):
         tile_create_frail(t, SPRITE_IDX_MOSS, x, y, 16, 16);
-    } else if (strcmp(tag, "TRK") == 0) {
+        break;
+    case TAG_KEY('T', 'R', 'K'):
         tile_create_trunk(t, x, y);
-    } else if (strcmp(tag, "TR1") == 0) {
+        break;
+    case TAG_KEY('T', 'R', '1'):
         tile_create_tree(t, x, y, 0);
-    } else if (strcmp(tag, "TR2") == 0) {
+        break;
+    case TAG_KEY('T', 'R', '2'):
         tile_create_tree(t, x, y, 1);
-    } else if (strcmp(tag, "TR3") == 0) {
+        break;
+    case TAG_KEY('T', 'R', '3'):
         tile_create_tree(t, x, y, 2);
-    } else if (strcmp(tag, "TR4") == 0) {
+        break;
+    case TAG_KEY('T', 'R', '4'):
         tile_create_tree(t, x, y, 3);
-    } else if (strcmp(tag, "TR5") == 0) {
+        break;
+    case TAG_KEY('T', 'R', '5'):
         tile_create_tree(t, x, y, 4);
-    } else if (strcmp(tag, "TR6") == 0) {
+        break;
+    case TAG_KEY('T', 'R', '6'):
         tile_create_tree(t, x, y, 5);
-    } else if (strcmp(tag, "STR") == 0) {
+        break;
+    case TAG_KEY('S', 'T', 'R'):
         tile_create_stars(t, x, y);
-    } else if (strcmp(tag, "MON") == 0) {
+        break;
+    case TAG_KEY('M', 'O', 'N'):
         tile_create_stars_moon(t, x, y);
+        break;
+    default:
+        break;
     }
 }
+
+#undef TAG_KEY
+
 
