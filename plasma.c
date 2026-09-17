@@ -70,7 +70,7 @@ void plasma_destroy(plasma_t *plasma) {
 }
 
 plasma_t* plasma_create_left(int x, int y) {
-    plasma_t *plasma = malloc(sizeof(plasma_t));
+    plasma_t *plasma = calloc(1, sizeof(plasma_t));
 
     plasma->speed_x = -2;
     plasma->state = PLASMA_STATE_FLYING_LEFT;
@@ -79,14 +79,14 @@ plasma_t* plasma_create_left(int x, int y) {
     plasma->tick = &plasma_tick;
     plasma->is_dead = &plasma_is_dead;
 
-    plasma->tile = malloc(sizeof(tile_t));
+    plasma->tile = calloc(1, sizeof(tile_t));
     tile_create_plasma_left(plasma->tile, x, y, 20, 3);
 
     return plasma;
 }
 
 plasma_t* plasma_create_right(int x, int y) {
-    plasma_t *plasma = malloc(sizeof(plasma_t));
+    plasma_t *plasma = calloc(1, sizeof(plasma_t));
 
     plasma->speed_x = 2;
     plasma->state = PLASMA_STATE_FLYING_RIGHT;
@@ -95,7 +95,7 @@ plasma_t* plasma_create_right(int x, int y) {
     plasma->tick = &plasma_tick;
     plasma->is_dead = &plasma_is_dead;
 
-    plasma->tile = malloc(sizeof(tile_t));
+    plasma->tile = calloc(1, sizeof(tile_t));
     tile_create_plasma_right(plasma->tile, x, y, 20, 3);
 
     return plasma;

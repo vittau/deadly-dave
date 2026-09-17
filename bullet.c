@@ -73,14 +73,14 @@ void bullet_destroy(bullet_t *bullet) {
 }
 
 bullet_t* bullet_create_internal(int x, int y, int speed) {
-    bullet_t *bullet = malloc(sizeof(bullet_t));
+    bullet_t *bullet = calloc(1, sizeof(bullet_t));
     bullet->speed_x = speed;
     bullet->state = 0;
     bullet->spawn_x = x;
     bullet->tick = &bullet_tick;
     bullet->is_dead = &bullet_is_dead;
 
-    bullet->tile = malloc(sizeof(tile_t));
+    bullet->tile = calloc(1, sizeof(tile_t));
     bullet->tile->x = x;
     bullet->tile->y = y;
     bullet->tile->width = 2;

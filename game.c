@@ -181,8 +181,9 @@ void draw_char(char c, int x, int y, int is_black) {
         'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', \
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', ',', '.', '(', \
         ')', '!', '?'};
+    size_t count = sizeof(letters) / sizeof(letters[0]);
 
-    for (int idx = 0; idx < sizeof(letters) / sizeof(int); idx++) {
+    for (size_t idx = 0; idx < count; idx++) {
         if ((int)c == letters[idx]) {
             tile_idx = letters_start_idx + idx;
             render_tile_idx(tile_idx, x, y);
@@ -192,14 +193,18 @@ void draw_char(char c, int x, int y, int is_black) {
 }
 
 void draw_text_line(const char *line, int x, int y) {
-    for (int i = 0; i < strlen(line); i++) {
-        draw_char(line[i], x + (i*8), y, 0);
+    size_t length = strlen(line);
+
+    for (size_t i = 0; i < length; i++) {
+        draw_char(line[i], x + (i * 8), y, 0);
     }
 }
 
 void draw_text_line_black(const char *line, int x, int y) {
-    for (int i = 0; i < strlen(line); i++) {
-        draw_char(line[i], x + (i*8), y, 1);
+    size_t length = strlen(line);
+
+    for (size_t i = 0; i < length; i++) {
+        draw_char(line[i], x + (i * 8), y, 1);
     }
 }
 
@@ -434,7 +439,7 @@ static void key_out_black_background(SDL_Surface *surface) {
 int load_assets(void) {
     char fname[64];
     int loaded = 0;
-    g_assets = malloc(sizeof(struct game_assets));
+    g_assets = calloc(1, sizeof(struct game_assets));
 
     for (int i = 0; i < 1000; i++) {
         g_assets->imgdata[i] = NULL;
@@ -673,7 +678,7 @@ int start_intro(void) {
     uint64_t timer_end;
     uint64_t delay;
 
-    keys_state_t key_state = {0, 0, 0, 0, 0, 0, 0, 0};
+    keys_state_t key_state = {0};
     // Clear screen
     SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(g_renderer);
@@ -1419,7 +1424,7 @@ static void clear_gameloop(game_context_t *game) {
 int gameloop(int starting_level) {
     game_context_t* game;
     tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT];
-    keys_state_t key_state = {0, 0, 0, 0, 0, 0, 0, 0};
+    keys_state_t key_state = {0};
     char level_path[4096];
 
     int state = G_STATE_NONE;
@@ -1430,7 +1435,7 @@ int gameloop(int starting_level) {
     uint64_t delay;
     uint64_t tick_interval = 14;
 
-    game = malloc(sizeof(game_context_t));
+    game = calloc(1, sizeof(game_context_t));
     init_game(game);
     game->level = starting_level;
 

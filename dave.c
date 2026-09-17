@@ -791,7 +791,7 @@ void dave_destroy(dave_t *dave) {
 }
 
 dave_t* dave_create(soundfx_t *sfx, int x, int y) {
-    dave_t *dave = malloc(sizeof(dave_t));
+    dave_t *dave = calloc(1, sizeof(dave_t));
     dave->sfx = sfx;
     dave->mute = 0;
     dave->step_count = 0;
@@ -814,7 +814,7 @@ dave_t* dave_create(soundfx_t *sfx, int x, int y) {
     dave->tick = &dave_tick;
     dave->is_dead = &dave_is_dead;
 
-    dave->tile = malloc(sizeof(tile_t));
+    dave->tile = calloc(1, sizeof(tile_t));
     dave->tile->x = x;
     dave->tile->y = y;
     dave->tile->width = 20;

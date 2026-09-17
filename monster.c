@@ -338,7 +338,7 @@ void monster_destroy(monster_t *monster) {
 }
 
 monster_t* monster_create(int x, int y, int w, int h) {
-    monster_t *monster = malloc(sizeof(monster_t));
+    monster_t *monster = calloc(1, sizeof(monster_t));
 
     monster->state = MONSTER_STATE_ACTIVE;
     monster->route_idx = 0;
@@ -349,7 +349,7 @@ monster_t* monster_create(int x, int y, int w, int h) {
     monster->tick = &monster_tick;
     monster->is_alive = &monster_is_alive;
 
-    monster->tile = malloc(sizeof(tile_t));
+    monster->tile = calloc(1, sizeof(tile_t));
     monster->tile->x = x;
     monster->tile->y = y;
     monster->tile->width = w;//24;
