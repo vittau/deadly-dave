@@ -52,6 +52,10 @@ static int g_fps_limit_index = FPS_LIMIT_REFRESH_INDEX;
 static void toggle_fullscreen(void);
 /* Defined further down, alongside the rest of the level HUD drawing. */
 static void draw_level_frame(game_context_t *game);
+/* Defined further down, alongside the level file loading it wraps. */
+static void game_load_current_level(game_context_t *game, tile_t *map);
+/* Defined further down, alongside the rest of the secret level handling. */
+static int game_level_has_secret(int level);
 
 /* Sprites that are XORed over what is behind them instead of painted on top. */
 static const int blended_sprites[] = {
@@ -409,10 +413,14 @@ static void draw_score(int score) {
 #define PAUSE_OPTION_VSYNC 0
 #define PAUSE_OPTION_FPS   1
 #define PAUSE_OPTION_MODE  2
-#define PAUSE_OPTION_QUIT  3
-#define PAUSE_OPTION_COUNT 4
+#define PAUSE_OPTION_WARP  3
+#define PAUSE_OPTION_QUIT  4
+#define PAUSE_OPTION_COUNT 5
 
-static void pause_menu_option_text(int option, char *out, size_t out_size) {
+/* Levels on disk, res/levels/level1.ddt through level9.ddt; WARP cycles through them. */
+#define TOTAL_LEVELS 9
+
+static void pause_menu_option_text(game_context_t *game, int option, char *out, size_t out_size) {
     switch (option) {
     case PAUSE_OPTION_VSYNC:
         snprintf(out, out_size, "V-SYNC: %s", g_vsync_enabled ? "ON" : "OFF");
@@ -424,14 +432,22 @@ static void pause_menu_option_text(int option, char *out, size_t out_size) {
         snprintf(out, out_size, "MODE: %s",
             ((SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN) != 0) ? "FULLSCREEN" : "WINDOWED");
         break;
+    case PAUSE_OPTION_WARP:
+        snprintf(out, out_size, "WARP: %lu%s", (unsigned long)game->level,
+            (game->level_secret_state == SECRET_LEVEL_ENTER) ? "S" : "");
+        break;
     default:
         snprintf(out, out_size, "QUIT");
         break;
     }
 }
 
-/* Applies the currently selected row; QUIT is handled by the caller instead. */
-static void pause_menu_apply_option(int option) {
+/*
+ * Applies the currently selected row; QUIT is handled by the caller instead.
+ * WARP jumps straight to a level and loads it right away, so the scene behind
+ * the menu shows it immediately instead of only once the menu closes.
+ */
+static void pause_menu_apply_option(game_context_t *game, tile_t *map, int option) {
     switch (option) {
     case PAUSE_OPTION_VSYNC:
         g_vsync_enabled = !g_vsync_enabled;
@@ -443,6 +459,21 @@ static void pause_menu_apply_option(int option) {
     case PAUSE_OPTION_MODE:
         toggle_fullscreen();
         break;
+    case PAUSE_OPTION_WARP:
+        /*
+         * A level with a secret twin gets an extra step on it before moving
+         * on, so the sequence goes ...4, 5, 5S, 6... instead of skipping it.
+         */
+        if (game_level_has_secret((int)game->level) && game->level_secret_state != SECRET_LEVEL_ENTER) {
+            game->level_secret_state = SECRET_LEVEL_ENTER;
+        } else {
+            game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
+            game->level = (game->level % TOTAL_LEVELS) + 1;
+        }
+        game->score = 0;
+        game->pause_level_changed = 1;
+        game_load_current_level(game, map);
+        break;
     default:
         break;
     }
@@ -451,16 +482,16 @@ static void pause_menu_apply_option(int option) {
 static void draw_pause_menu(game_context_t *game) {
     int offset = display_center_offset();
     const int columns = 24;
-    const int rows = 9;
+    const int rows = 11;
     int box_x = offset + ((DISPLAY_BASE_WIDTH - (columns * 8)) / 2);
-    int box_y = 56;
+    int box_y = DISPLAY_SCENE_TOP + (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (rows * 8)) / 2);
     char line[32];
 
     draw_popup_box(box_x, box_y, rows, columns);
     draw_text_line_black("PAUSE", box_x + (((columns * 8) - (5 * 8)) / 2), box_y + 8);
 
     for (int i = 0; i < PAUSE_OPTION_COUNT; i++) {
-        pause_menu_option_text(i, line, sizeof(line));
+        pause_menu_option_text(game, i, line, sizeof(line));
         draw_text_line_black(line, box_x + 16, box_y + 24 + (i * 10));
     }
 
@@ -476,6 +507,7 @@ static void pause_menu_open(game_context_t *game) {
     game->pause_prev_up = 0;
     game->pause_prev_down = 0;
     game->pause_prev_confirm = 0;
+    game->pause_level_changed = 0;
 }
 
 /*
@@ -511,6 +543,15 @@ static int game_pause_menu(game_context_t *game, tile_t *map, keys_state_t *keys
     }
 
     if (consume_escape_edge(game, keys) || keys->key_n) {
+        /*
+         * WARP already loaded the new level into map so the menu could show
+         * it live; on close, drop into it the same way a normal level load
+         * does rather than resuming the state (level or warp corridor) that
+         * was behind the menu before it jumped.
+         */
+        if (game->pause_level_changed) {
+            return G_STATE_LEVEL_BLINKING;
+        }
         g_soundfx->resume(g_soundfx);
         return resume_state;
     }
@@ -534,7 +575,7 @@ static int game_pause_menu(game_context_t *game, tile_t *map, keys_state_t *keys
         if (game->pause_selected == PAUSE_OPTION_QUIT) {
             return G_STATE_QUIT_NOW;
         }
-        pause_menu_apply_option(game->pause_selected);
+        pause_menu_apply_option(game, map, game->pause_selected);
     }
 
     /*
@@ -547,7 +588,8 @@ static int game_pause_menu(game_context_t *game, tile_t *map, keys_state_t *keys
     clear_screen();
     draw_scrollable_area(game, map);
     draw_level_frame(game);
-    if (is_warp) {
+    /* A WARP jump swaps the corridor for a regular level, which isn't clipped to 320 pixels. */
+    if (is_warp && !game->pause_level_changed) {
         clear_screen_sides();
     }
     draw_pause_menu(game);
@@ -1777,6 +1819,35 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     return 0;
 }
 
+/*
+ * Loads game->level into map and resets Dave to its start, the same load
+ * G_STATE_NONE and G_STATE_LEVEL_START do together over two ticks. The pause
+ * menu's WARP row calls this directly so the scene behind the box shows the
+ * new level right away instead of only once the menu closes.
+ */
+static void game_load_current_level(game_context_t *game, tile_t *map) {
+    char level_path[4096];
+
+    clear_map(map);
+    clear_monsters(game);
+
+    if (game->level_secret_state == SECRET_LEVEL_ENTER) {
+        snprintf(level_path, sizeof(level_path), "res/levels/level%ld_secret.ddt", (long)game->level);
+    } else {
+        snprintf(level_path, sizeof(level_path), "res/levels/level%ld.ddt", (long)game->level);
+    }
+
+    game_level_load(game, map, level_path);
+
+    game->dave->tile->x = game->dave->default_x;
+    game->dave->tile->y = game->dave->default_y;
+    /* Only the warp corridor mutes Dave; a level jumped to straight out of it must not stay muted. */
+    game->dave->mute = 0;
+    game->scroll_offset = 0;
+    game->blinking_timer = 0;
+    game_set_scroll_to_dave(game);
+}
+
 static void clear_gameloop(game_context_t *game) {
     clear_monsters(game);
     dave_destroy(game->dave);
@@ -1862,6 +1933,15 @@ static int gameloop(int starting_level) {
     game = calloc(1, sizeof(game_context_t));
     init_game(game);
     game->level = starting_level;
+
+    /*
+     * Escape (or gamepad Start) is what leaves the title screen, and the same
+     * press is often still held on the very first step here: without this,
+     * consume_escape_edge() would see it as a brand new press and open the
+     * pause menu immediately instead of a plain level start.
+     */
+    get_keys(&key_state);
+    game->prev_escape = key_state.escape;
 
     pacer_init(&pacer);
 

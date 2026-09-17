@@ -95,6 +95,8 @@ typedef struct game_context_struct {
     int32_t pause_prev_up;
     int32_t pause_prev_down;
     int32_t pause_prev_confirm;
+    /* Set by the WARP row: the level was changed, so closing the menu must reload it. */
+    int32_t pause_level_changed;
 } game_context_t;
 
 
