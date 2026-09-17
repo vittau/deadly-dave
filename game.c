@@ -25,6 +25,10 @@ soundfx_t *g_soundfx;
 void render_tile_idx(int tile_idx, int x, int y) {
     SDL_Surface *surface = g_assets->imgdata[tile_idx];
 
+    if (surface == NULL) {
+        return;
+    }
+
     int blend = 0;
     if (tile_idx == SPRITE_IDX_BULLET_RIGHT || tile_idx == SPRITE_IDX_BULLET_LEFT ||
             tile_idx == SPRITE_IDX_MONSTER_SUN1 || tile_idx == SPRITE_IDX_MONSTER_SUN2 ||
@@ -319,6 +323,7 @@ void unload_assets(assets_t *assets) {
 
 int load_assets() {
     char fname[64];
+    int loaded = 0;
     g_assets = malloc(sizeof(struct game_assets));
 
     for (int i = 0; i < 1000; i++) {
@@ -329,7 +334,20 @@ int load_assets() {
             SDL_Surface *surface = SDL_LoadBMP(fname);
             g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
             SDL_DestroySurface(surface);
+            loaded++;
         }
+    }
+
+    /*
+     * Nothing loaded means the artwork is not next to the binary. Fail with a
+     * message instead of drawing with no tiles at all.
+     */
+    if (loaded == 0) {
+        printf("Could not find the game assets in 'res/tiles'. \n");
+        printf("The 'res' directory has to sit next to the executable. \n");
+        free(g_assets);
+        g_assets = NULL;
+        return -1;
     }
 
     return 0;
@@ -1323,7 +1341,23 @@ int game_main(int is_windowed, int starting_level) {
     SDL_FlushEvent(SDL_EVENT_MOUSE_BUTTON_DOWN);
     SDL_FlushEvent(SDL_EVENT_MOUSE_MOTION);
 
-    load_assets();
+    /*
+     * The artwork and the levels are loaded through paths relative to the
+     * binary, not to the working directory, so that the game also runs when it
+     * is started from somewhere else (a file manager, for instance).
+     */
+    const char *base_path = SDL_GetBasePath();
+    if (base_path != NULL) {
+        if (chdir(base_path) != 0) {
+            printf("Failed to switch to the game directory '%s'. \n", base_path);
+        }
+        SDL_free((void *)base_path);
+    }
+
+    if (load_assets() != 0) {
+        SDL_Quit();
+        return -6;
+    }
     g_soundfx = soundfx_create();
 
     while (1) {
