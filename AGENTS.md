@@ -233,8 +233,11 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
   so a new build is a new tag, not a moved one. The actions are on Node 24
   runtimes (`checkout` v7, `upload-artifact` v7, `download-artifact` v8,
   `action-gh-release` v3).
-- The Windows job uses `ilammy/msvc-dev-cmd@v1`, which still targets Node 20:
-  every run carries a deprecation warning because the action has no Node 24
-  release (as of September 2026). Not something to fix on our side.
+- The Windows job sets up the MSVC environment with its own `pwsh` step instead
+  of `ilammy/msvc-dev-cmd`, a Node 20 action with no Node 24 release that warned
+  on every run. The step enters the developer shell of the Visual Studio that
+  ships on the runner and appends the variables it changes to `$GITHUB_ENV`, so
+  `cmake`, `ninja` and `cl` find each other in the later steps. Keep it that way
+  rather than bringing back an action on an old runtime.
 - Build outputs are gitignored: `ddave`, `deadly-dave`, `Deadly Dave.app/`,
   `build/`, `dist/`, the test binaries, `*.dSYM/`, `.DS_Store`.

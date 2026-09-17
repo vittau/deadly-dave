@@ -56,7 +56,28 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Set up the MSVC environment
+        # Replaces ilammy/msvc-dev-cmd, still a Node 20 action with no Node 24
+        # release (September 2026), which warned on every run. The image ships
+        # Visual Studio, so enter its developer shell and hand the variables it
+        # changes to the steps below.
+        shell: pwsh
+        run: |
+          $before = @{}
+          Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Visual Studio with the C++ build tools was not found' }
+
+          Import-Module (Join-Path $vsPath 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
+          Enter-VsDevShell -VsInstallPath $vsPath -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64' | Out-Null
+
+          Get-ChildItem env: | ForEach-Object {
+            if ($before[$_.Name] -ne $_.Value) {
+              "$($_.Name)=$($_.Value)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
 
       - name: Configure
         # MultiThreaded links the C runtime statically, so the exe needs no
