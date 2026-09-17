@@ -34,8 +34,9 @@ emulator and without anything to install.
   plays the same in Gaming Mode, added as a non-Steam game, as on a desktop.
 - **Starts full screen.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere else,
   switches between full screen and windowed. `-w` starts windowed instead.
-- **The whole game**, ten levels and the secret one, with the intro and the
-  original sound effects decoded from the game's own data.
+- **The whole game**, all ten levels and all four bonus warp zones, each one the
+  full original map, with the intro and the original sound effects decoded from
+  the game's own data.
 
 ![Level 6](res/screenshots/screen3.png)
 

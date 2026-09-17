@@ -43,6 +43,50 @@ except the icons.
   345). A too large value writes far past the buffer and the process dies with
   SIGBUS, which is what `test_invfreq` used to do.
 
+## Levels and the original game data
+
+`original/` is gitignored and holds the original game: `Dave.EXE` (LZEXE v0.91),
+`UNPACKED_DAVE.EXE` (it runs as is in DOSBox) and `EGADAVE.DAV`. Everything below
+is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
+(`https://moddingwiki.shikadi.net/wiki/Dangerous_Dave_Level_format`).
+
+- Levels start at `0x26e0a`: ten 1280-byte chunks of 256 path bytes + 1000 tile
+  bytes (100x10, row major, one byte per tile = the `res/tiles/tileN.bmp` index)
+  + 24 unused. Start state: motion flags at `0x257e8`, startX at `0x257f2` and
+  startY at `0x25806` (both `u16[10]`). Monster table at `0x25b66` (80 bytes a
+  level: enabled/x/y/offset/calmness, four of each). Warp map at `0x2583a`
+  (level -> chunk); the warp view starts at the column in `0x25862` and Dave at
+  `0x25862+20` (x, relative to that column); the warp startY is 16.
+- A chunk can hold two levels: the main one on the left (where Dave starts) and
+  a warp/bonus on the right. level1+level10 warp (chunk1), level2+level5 warp
+  (chunk2), level6+level8 warp (chunk6), level7+level9 warp (chunk7). Those
+  warps are the `levelN_secret.ddt` files, loaded when Dave walks off the level
+  edge (`game_level_has_secret()`); the rest of a chunk is plain level. A secret
+  file is the same full 100-column chunk with `D` on the warp start column, so
+  the two definitions of a chunk are duplicates on purpose.
+- A `.ddt` is the chunk transposed: one line per column, a comma separated tag
+  per row, `;` at the end. A line carries 11 tags and the first is the row that
+  hides behind the top HUD bar, so tag `T` in line `L` is column `L`, row `T-1`.
+  Tags are 3 chars and go through `tile_create()`; `D` spawns Dave at
+  `startX/16, startY/16`. A monster tag replaces the tile under it, so put it on
+  a cell the original leaves empty.
+- Tag to tile byte is not one to one. `TR1`/`TR2` (34/35) are the same drawing,
+  but the tree corners are not: byte 43 is top-left (`TR4`), 44 top-right
+  (`TR3`), 45 bottom-left (`TR6`), 46 bottom-right (`TR5`), because
+  `tile_create_tree()` maps `TR5` to 46 and `TR6` to 45. `PPK`/`PPF` (30/31) look
+  identical too, PPF being the one Dave falls through. Fire `FR1..4`, water
+  `WT1..5` and vines `VI1..4` are animation phases of a single tile, and moss
+  `  M`/`D+M` both draw the moss tile (`D+M` also spawns Dave).
+- Decode a level to the full 100-column chunk, never cut it short: the game
+  follows the window aspect ratio, so a wide window draws the whole level,
+  including a warp half that cannot be reached from the main level. Cutting one
+  only leaves the extra columns black.
+- To check a decode, render every `ddt` cell back to its tile byte and compare it
+  with the chunk bytes (must match everywhere). An independent cross-check is the
+  vgmaps map, `https://vgmaps.de/files/pc/maps/dangerous-dave-in-the-deserted-pirates-hideout-level-NN-pc-map.webp`
+  (`NN` 01..10; needs a browser User-Agent), which confirms the tile layer but
+  draws the monsters by hand and is 150px tall, so it cuts the bottom row.
+
 ## Gotchas
 
 - SDL3, not SDL2: `SDL_Init` returns true on success, event types are

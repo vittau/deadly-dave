@@ -1485,8 +1485,12 @@ static int game_level_blinking(game_context_t *game, tile_t *map, keys_state_t *
 }
 
 
+/*
+ * Levels whose chunk also stores a warp zone (a bonus area reached by going
+ * off the edge of the level): level5_secret.ddt and friends.
+ */
 static int game_level_has_secret(int level) {
-    if (level == 5) {
+    if (level == 5 || level == 8 || level == 9 || level == 10) {
         return 1;
     }
     return 0;
