@@ -45,6 +45,10 @@ except the icons.
   centred by `game_view_x()` with black on the sides, and projectile range is
   kept at the original 320px on purpose, so a wider window changes nothing but
   what you can see.
+- Monsters, plasma and the bullet are drawn blended: `render_tile_idx` XORs
+  their colours over what is behind them. The XOR must keep the sprite's alpha
+  byte, or it produces alpha 0 pixels that render black and eat the level
+  wherever the sprite touches a tile.
 - Jump is edge triggered in `dave.c` (`jump_pressed`, `key_up_prev`): it starts
   on a fresh press while grounded and a press in the air is dropped, never
   buffered for the landing.

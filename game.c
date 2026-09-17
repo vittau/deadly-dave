@@ -64,7 +64,14 @@ void render_tile_idx(int tile_idx, int x, int y) {
                         uint32_t oldpixel = g_pixels[(line_idx + y) * g_pixels_pitch + (column_idx + x)];
 
                         if (oldpixel != 0x000000FF) {
-                            pixel = (pixel ^ oldpixel);
+                            /*
+                             * XOR the colours but keep the sprite's alpha. The
+                             * alpha byte marks transparency, so mixing it with
+                             * the background would punch holes in the level
+                             * wherever a blended sprite touches it.
+                             */
+                            pixel = (pixel & 0x000000FF) |
+                                    ((pixel ^ oldpixel) & 0xFFFFFF00);
                         }
                     }
                     g_pixels[(line_idx + y) * g_pixels_pitch + (column_idx + x)] = pixel;
