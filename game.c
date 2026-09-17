@@ -472,7 +472,11 @@ int is_any_key_pressed(keys_state_t* key_state) {
     return 0;
 }
 
-void start_intro() {
+/*
+ * Shows the intro until the player starts the game. Returns 0 when the player
+ * quit or closed the window, so the caller can shut the game down.
+ */
+int start_intro() {
     int32_t intro_should_finish = 0;
     uint64_t timer_begin;
     uint64_t timer_end;
@@ -487,6 +491,11 @@ void start_intro() {
     get_keys(&key_state);
     get_keys(&key_state);
     get_keys(&key_state);
+
+    /* A close requested while those ran still has to end the game. */
+    if (key_state.quit) {
+        return 0;
+    }
     memset(&key_state, 0x00, sizeof(keys_state_t));
 
     tile_t block[41];
@@ -544,8 +553,9 @@ void start_intro() {
 
         get_keys(&key_state);
 
-        if (key_state.escape) {
-            exit(0);
+        /* Quit, or the window was closed: leave so the game can shut down. */
+        if (key_state.escape || key_state.quit) {
+            return 0;
         }
 
         if (key_state.enter || key_state.space) {
@@ -557,7 +567,7 @@ void start_intro() {
         display_sync();
         g_pixels = display_lock(&g_pixels_pitch);
         if (g_pixels == NULL) {
-            return;
+            return 0;
         }
 
         clear_screen();
@@ -586,6 +596,8 @@ void start_intro() {
         delay = delay > 14 ? 0 : delay;
         SDL_Delay((uint32_t)delay);
     }
+
+    return 1;
 }
 
 void clear_monsters(game_context_t *game) {
@@ -1312,6 +1324,25 @@ int gameloop(int starting_level) {
     return 0;
 }
 
+/*
+ * Single exit point, so however the game ends the audio device, the assets and
+ * SDL are released and the process can really terminate.
+ */
+static int game_shutdown(void) {
+    printf("bye bye \n");
+    if (g_soundfx != NULL) {
+        soundfx_destroy(g_soundfx);
+        g_soundfx = NULL;
+    }
+    if (g_assets != NULL) {
+        unload_assets(g_assets);
+        g_assets = NULL;
+    }
+    display_quit();
+    SDL_Quit();
+    return 0;
+}
+
 int game_main(int is_windowed, int starting_level) {
     int ret = 0;
     const int windowed_scale = 3;
@@ -1381,36 +1412,36 @@ int game_main(int is_windowed, int starting_level) {
         if (chdir(base_path) != 0) {
             printf("Failed to switch to the game directory '%s'. \n", base_path);
         }
-        SDL_free((void *)base_path);
+        /* SDL caches this string and frees it itself on SDL_Quit. */
     }
 
     if (load_assets() != 0) {
         SDL_Quit();
         return -6;
     }
+
+    /* Window and taskbar icon, the same sprite the packages use as app icon. */
+    if (g_assets->imgdata[SPRITE_IDX_ICON] != NULL) {
+        SDL_SetWindowIcon(g_window, g_assets->imgdata[SPRITE_IDX_ICON]);
+    }
+
     g_soundfx = soundfx_create();
 
     while (1) {
-        start_intro();
+        if (!start_intro()) {
+            return game_shutdown();
+        }
+
         ret = gameloop(starting_level);
         printf("game-loop finished with ret-code: %d \n", ret);
 
-        if (ret == 0) {
-            return 0;
-        } else if (ret == 1) {
-            printf("bye bye \n");
-            soundfx_destroy(g_soundfx);
-            unload_assets(g_assets);
-            display_quit();
-            SDL_Quit();
-            return 0;
-        } else if (ret == 2) {
-            printf("game-over \n");
+        /*
+         * ret 1 is the player quitting. ret 2 is game over: fall through and
+         * show the intro again for a new game.
+         */
+        if (ret == 1) {
+            return game_shutdown();
         }
     }
-
-    soundfx_destroy(g_soundfx);
-    SDL_Quit();
-    return 0;
 }
 

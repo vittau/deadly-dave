@@ -22,9 +22,17 @@ Main focus:
 The game needs **SDL 3.4.16** or newer and nothing else.
 
     make                 # uses pkg-config to find SDL3
+    make app             # macOS: wraps the game in "Deadly Dave.app"
+    make icon            # regenerates assets/icon.* (needs python3)
     cd tests && make     # unit tests
 
-The CMake build fetches and links SDL3 statically instead.
+The CMake build fetches and links SDL3 statically instead. On macOS the `app`
+target produces a bundle with the resources inside it, so the game can be
+double-clicked and opens without a terminal.
+
+Every build uses the same icon, the Dave sprite from `res/tiles/tile55.bmp`,
+turned into an `.icns` for the macOS bundle, an `.ico` embedded in the Windows
+executable and a `.png` for the Linux window.
 
 ### Releases
 

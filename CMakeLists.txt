@@ -35,10 +35,22 @@ include_directories(include)
 
 if (WIN32)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")# Add source to this project's executable.
+
+  # Embed assets/icon.ico in the executable, which is what Explorer shows.
+  enable_language(RC)
+  file(TO_NATIVE_PATH "${deadly-dave_SOURCE_DIR}/assets/icon.ico" ICON_PATH)
+  configure_file("${deadly-dave_SOURCE_DIR}/assets/deadly-dave.rc.in"
+                 "${deadly-dave_BINARY_DIR}/deadly-dave.rc" @ONLY)
+  set(DEADLY_DAVE_RC "${deadly-dave_BINARY_DIR}/deadly-dave.rc")
 endif()
 
+set(DEADLY_DAVE_SOURCES "main.c" "game.c" "display.c" "invfreq.c" "monster.c"
+    "plasma.c" "tile.c" "dave.c" "soundfx.c" "bullet.c")
+if (WIN32)
+  list(APPEND DEADLY_DAVE_SOURCES "${DEADLY_DAVE_RC}")
+endif()
 
- add_executable (deadly-dave "main.c" "game.c" "display.c" "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c" "bullet.c")
+add_executable (deadly-dave ${DEADLY_DAVE_SOURCES})
 
 target_link_libraries(deadly-dave PUBLIC SDL3::SDL3-static)
 #set_property(TARGET deadly-dave)

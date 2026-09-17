@@ -105,6 +105,8 @@ static const int SPRITE_IDX_DAVE_RIGHT_HANDSFREE   = 53;
 static const int SPRITE_IDX_DAVE_RIGHT_STAND       = 54;
 static const int SPRITE_IDX_DAVE_RIGHT_SERIOUS     = 55;
 static const int SPRITE_IDX_DAVE_FRONT             = 56;
+/* The sprite used as the game icon: Dave facing right with the gun. */
+#define SPRITE_IDX_ICON SPRITE_IDX_DAVE_RIGHT_SERIOUS
 static const int SPRITE_IDX_DAVE_LEFT_HANDSFREE    = 57;
 static const int SPRITE_IDX_DAVE_LEFT_STAND        = 58;
 static const int SPRITE_IDX_DAVE_LEFT_SERIOUS      = 59;

@@ -40,6 +40,7 @@ jobs:
           mkdir -p dist/deadly-dave
           cp deadly-dave dist/deadly-dave/
           cp -R res dist/deadly-dave/res
+          cp assets/icon.png dist/deadly-dave/icon.png
           rm -rf dist/deadly-dave/res/screenshots
           tar -C dist -czf deadly-dave-linux-x86_64.tar.gz deadly-dave
 
@@ -98,39 +99,8 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          APP="Deadly Dave.app"
-
-          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-          cp deadly-dave "$APP/Contents/MacOS/deadly-dave"
-          cp -R res "$APP/Contents/Resources/res"
-          rm -rf "$APP/Contents/Resources/res/screenshots"
-
-          # SDL looks for the resources in the bundle's Resources directory.
-          cat > "$APP/Contents/Info.plist" <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>CFBundleDevelopmentRegion</key><string>en</string>
-              <key>CFBundleExecutable</key><string>deadly-dave</string>
-              <key>CFBundleIdentifier</key><string>io.github.vittau.deadly-dave</string>
-              <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-              <key>CFBundleName</key><string>Deadly Dave</string>
-              <key>CFBundleDisplayName</key><string>Deadly Dave</string>
-              <key>CFBundlePackageType</key><string>APPL</string>
-              <key>CFBundleShortVersionString</key><string>${VERSION:-dev}</string>
-              <key>CFBundleVersion</key><string>${VERSION:-dev}</string>
-              <key>LSMinimumSystemVersion</key><string>11.0</string>
-              <key>NSHighResolutionCapable</key><true/>
-          </dict>
-          </plist>
-          PLIST
-
-          # Ad-hoc signature, enough for the binary to run on Apple Silicon.
-          codesign --force --sign - "$APP"
-
-          ditto -c -k --keepParent "$APP" deadly-dave-macos-universal.zip
+          sh scripts/package-macos-app.sh deadly-dave "Deadly Dave.app" "${GITHUB_REF_NAME#v}"
+          ditto -c -k --keepParent "Deadly Dave.app" deadly-dave-macos-universal.zip
 
       - uses: actions/upload-artifact@v4
         with:

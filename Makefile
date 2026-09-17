@@ -29,8 +29,20 @@ CFLAGS = -rdynamic -std=c99 -Wall
 CFLAGS += $(shell pkg-config --cflags sdl3)
 LIBS := $(shell pkg-config --libs sdl3)
 
-all: $(C_FILES) $(H_FILES)
+all: $(BIN)
+
+$(BIN): $(C_FILES) $(H_FILES)
 	$(CC) $(C_FILES) $(CFLAGS) -Iinclude $(LIBS) -o $(BIN)
+
+# macOS only: wraps the game in a double-clickable .app, so it opens as a window
+# on its own, without a terminal.
+app: $(BIN)
+	sh scripts/package-macos-app.sh $(BIN) "Deadly Dave.app" 1.0
+
+# Rebuilds assets/icon.* (icns, ico, png) from the sprite used as game icon.
+icon:
+	python3 scripts/make-icon.py
 
 clean:
 	rm -f $(BIN)
+	rm -rf "Deadly Dave.app"

@@ -1,6 +1,7 @@
 ddave
 deadly-dave
 deadly-dave.exe
+Deadly Dave.app/
 build/
 dist/
 tests/test_invfreq
@@ -9,3 +10,5 @@ tests/test_display
 *.dSYM/
 
 out/**
+
+.DS_Store
