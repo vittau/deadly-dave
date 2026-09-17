@@ -143,6 +143,19 @@ int display_init(SDL_Renderer *renderer, int scale_mode) {
     g_display_renderer = renderer;
     g_scale_mode = scale_mode;
 
+    /*
+     * Present on the vertical blank, so a frame is shown whole instead of torn.
+     * The game speed does not hang on it any more: the loop paces its logic on
+     * its own clock (see the frame pacer in game.c), the display only decides
+     * how often the picture is put on the screen. A backend that cannot do it
+     * is not an error either, the loop then paces the frames by itself off
+     * display_frame_period_ns().
+     */
+    if (!SDL_SetRenderVSync(g_display_renderer, 1)) {
+        printf("Could not enable vsync, frames are paced by the loop alone. Error: (%s) \n",
+            SDL_GetError());
+    }
+
     SDL_GetCurrentRenderOutputSize(g_display_renderer, &out_w, &out_h);
     g_geometry = display_compute_geometry(out_w, out_h, g_scale_mode);
 
@@ -203,6 +216,65 @@ int display_center_offset(void) {
 
 int display_right_offset(void) {
     return g_geometry.width - DISPLAY_BASE_WIDTH;
+}
+
+/*
+ * The rate the game falls back to when the display will not say what it runs
+ * at, and the range outside which the answer is not believed: a mode SDL
+ * reports as 5 Hz or 10000 Hz is a broken or virtual display, not something to
+ * pace the game with.
+ */
+#define DISPLAY_FALLBACK_PERIOD_NS (SDL_NS_PER_SECOND / 60)
+#define DISPLAY_MIN_PERIOD_NS      (SDL_NS_PER_SECOND / 360)
+#define DISPLAY_MAX_PERIOD_NS      (SDL_NS_PER_SECOND / 24)
+
+uint64_t display_frame_period_ns(void) {
+    const SDL_DisplayMode *mode;
+    SDL_Window *window;
+    SDL_DisplayID display;
+    uint64_t period;
+
+    if (g_display_renderer == NULL) {
+        return DISPLAY_FALLBACK_PERIOD_NS;
+    }
+
+    /*
+     * Asked for again on every frame instead of cached: the window can be
+     * dragged to a second screen that runs at another rate, and the mode of the
+     * one it is on can change under it. All of this reads SDL's own display
+     * list, so it costs about as little as the size query display_sync() makes.
+     */
+    window = SDL_GetRenderWindow(g_display_renderer);
+    if (window == NULL) {
+        return DISPLAY_FALLBACK_PERIOD_NS;
+    }
+
+    display = SDL_GetDisplayForWindow(window);
+    if (display == 0) {
+        return DISPLAY_FALLBACK_PERIOD_NS;
+    }
+
+    mode = SDL_GetCurrentDisplayMode(display);
+    if (mode == NULL) {
+        return DISPLAY_FALLBACK_PERIOD_NS;
+    }
+
+    if (mode->refresh_rate_numerator > 0 && mode->refresh_rate_denominator > 0) {
+        /* Exact: 60000/1001 stays 60000/1001 instead of going through a float. */
+        period = (SDL_NS_PER_SECOND * (uint64_t)mode->refresh_rate_denominator) /
+            (uint64_t)mode->refresh_rate_numerator;
+    } else if (mode->refresh_rate > 0.0f) {
+        period = (uint64_t)((double)SDL_NS_PER_SECOND / (double)mode->refresh_rate);
+    } else {
+        /* 0 means "unknown", which some backends and virtual displays do report. */
+        return DISPLAY_FALLBACK_PERIOD_NS;
+    }
+
+    if (period < DISPLAY_MIN_PERIOD_NS || period > DISPLAY_MAX_PERIOD_NS) {
+        return DISPLAY_FALLBACK_PERIOD_NS;
+    }
+
+    return period;
 }
 
 uint32_t *display_lock(int *pitch_in_pixels) {

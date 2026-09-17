@@ -721,14 +721,125 @@ static int is_any_key_pressed(keys_state_t* key_state) {
 }
 
 /*
+ * Frame pacing.
+ *
+ * The game logic is a fixed 14 ms step: every movement, animation, timer and
+ * monster tick advances exactly once per step, so the step length IS the game
+ * speed and it must not follow the display.
+ *
+ * The picture runs on a clock of its own: one frame per refresh of the screen
+ * the window is on, presented on the vertical blank. The rate is asked of the
+ * display rather than pinned to 60, because with vsync on the two have to
+ * agree. SDL_RenderPresent() returns at the blank, so a budget built from the
+ * panel's own rate lines the frames up with it, while a budget that is a
+ * multiple and a half of it hands out frames that are alternately one blank and
+ * two blanks long: a 16.6 ms budget on a 90 Hz panel (the Steam Deck OLED)
+ * still averages 60 fps, but every second frame stays up twice as long as the
+ * one before it, and that unevenness is what the eye picks up in a scroll. A
+ * display that will not say what it runs at gets 60 Hz out of
+ * display_frame_period_ns(), and then the sleep alone is what bounds the frames.
+ *
+ * The two clocks are kept apart by an accumulator. Each frame adds the time it
+ * really took to the logic clock and spends it in whole 14 ms steps, so a frame
+ * runs however many steps have come due: a frame that came early runs none and
+ * leaves the time in the accumulator, a 40 ms frame runs the 2 steps it owes
+ * plus whatever was left over. The game therefore advances at the very same
+ * 1000/14 steps per second it always did, whatever the frame rate is, and no
+ * time is invented or lost because only whole steps are ever taken out of the
+ * accumulator.
+ */
+#define LOGIC_STEP_NS   ((int64_t)14 * 1000000)   /* the 14 ms tick, unchanged */
+#define LOGIC_MAX_STEPS 5                         /* catch-up bound, 70 ms of logic */
+/*
+ * The budget is aimed a shade under one refresh, about 1.6%, and the direction
+ * is the whole point. Our idea of the refresh period is never exactly the
+ * panel's: SDL may report a rounded 60 for a 59.94 Hz mode, and the clock this
+ * loop reads drifts against the one the panel scans out on. Aim a hair long and
+ * the loop asks for a frame just after each blank has gone by, drifts further
+ * every frame, and once the gap grows past what is left to draw in it drops a
+ * frame and starts over - a hitch every few seconds. Aim a hair short and the
+ * loop is always already late for its own budget, never sleeps, and vsync alone
+ * decides when the frame goes out, which is what we want it to do.
+ */
+#define FRAME_BUDGET_MARGIN(period) ((period) / 64)
+
+typedef struct frame_pacer_struct {
+    uint64_t frame_begin;   /* when the current frame started                  */
+    uint64_t next_frame;    /* earliest moment the next frame may be drawn     */
+    uint64_t frame_period;  /* the frame budget: one refresh, less the margin  */
+    int64_t  accumulator;   /* nanoseconds owed to the logic clock             */
+} frame_pacer_t;
+
+/* One refresh of the screen the window is on, less the margin above. */
+static uint64_t pacer_budget_ns(void) {
+    uint64_t period = display_frame_period_ns();
+    return period - FRAME_BUDGET_MARGIN(period);
+}
+
+static void pacer_init(frame_pacer_t *pacer) {
+    pacer->frame_begin = SDL_GetTicksNS();
+    pacer->next_frame = pacer->frame_begin;
+    pacer->frame_period = pacer_budget_ns();
+    pacer->accumulator = 0;
+}
+
+/*
+ * Opens a frame: sleeps until the display is ready for another one and returns
+ * how many 14 ms logic steps that frame has to run before it draws.
+ *
+ * The wait is an SDL_DelayNS(), never a spin, so a frame with nothing to do
+ * gives the CPU back instead of burning a battery. It is also the fallback and
+ * not the main event: with the budget a shade under one refresh the loop is
+ * always already past it, so this sleep does nothing and vsync inside
+ * SDL_RenderPresent() is what the frames line up on. It is what paces the game
+ * when vsync could not be turned on. Either way the time both of them spend is
+ * measured here and handed to the logic clock, so neither changes the game
+ * speed.
+ *
+ * The step count is clamped to LOGIC_MAX_STEPS and the rest of the accumulator
+ * is dropped with it: after a dragged window, a suspended machine or a
+ * breakpoint the game skips the time it could not keep up with instead of
+ * spiralling into a catch-up storm it would never come out of.
+ */
+static int pacer_begin_frame(frame_pacer_t *pacer) {
+    uint64_t now = SDL_GetTicksNS();
+    int steps;
+
+    if (now < pacer->next_frame) {
+        SDL_DelayNS(pacer->next_frame - now);
+        now = SDL_GetTicksNS();
+    }
+
+    /* The window may have been dragged onto a screen with another refresh rate. */
+    pacer->frame_period = pacer_budget_ns();
+
+    pacer->next_frame += pacer->frame_period;
+    if (pacer->next_frame < now) {
+        /* The frame overran its budget; line the ceiling back up with now. */
+        pacer->next_frame = now + pacer->frame_period;
+    }
+
+    pacer->accumulator += (int64_t)(now - pacer->frame_begin);
+    pacer->frame_begin = now;
+
+    steps = (int)(pacer->accumulator / LOGIC_STEP_NS);
+    if (steps > LOGIC_MAX_STEPS) {
+        steps = LOGIC_MAX_STEPS;
+        pacer->accumulator = 0;
+    } else {
+        pacer->accumulator -= (int64_t)steps * LOGIC_STEP_NS;
+    }
+
+    return steps;
+}
+
+/*
  * Shows the intro until the player starts the game. Returns 0 when the player
  * quit or closed the window, so the caller can shut the game down.
  */
 static int start_intro(void) {
     int32_t intro_should_finish = 0;
-    uint64_t timer_begin;
-    uint64_t timer_end;
-    uint64_t delay;
+    frame_pacer_t pacer;
 
     keys_state_t key_state = {0};
     // Clear screen
@@ -796,52 +907,80 @@ static int start_intro(void) {
     tile_create_intro_fire(&block[39], 208, 160);
     tile_create_block(&block[40], SPRITE_IDX_DIRT, 224, 160, TILE_SIZE, TILE_SIZE);
 
+    pacer_init(&pacer);
+
     while (!intro_should_finish) {
-        timer_begin = SDL_GetTicks();
+        int steps = pacer_begin_frame(&pacer);
 
-        get_keys(&key_state);
-
-        /*
-         * Enter, space or any of the pad's face buttons starts the game. The
-         * pad's Start raises escape as well, so this comes first and wins: on
-         * the title screen Start means "go", not "quit".
-         */
-        if (key_state.enter || key_state.space || key_state.jump ||
-                key_state.fire || key_state.jetpack) {
-            intro_should_finish = 1;
-
-        /* Quit, or the window was closed: leave so the game can shut down. */
-        } else if (key_state.escape || key_state.quit) {
-            return 0;
+        if (steps == 0) {
+            /*
+             * The screen refreshes faster than the 14 ms step and none came
+             * due, so nothing has moved and there is no new picture to put up.
+             * Sending the same one again would buy a blit and a wait for the
+             * blank and change nothing on the screen, so the frame is dropped
+             * and the window keeps what it already shows.
+             */
+            continue;
         }
 
         SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(g_renderer);
+        /* Picks up window resizes and aspect-ratio changes before anything is drawn. */
         display_sync();
+
         g_pixels = display_lock(&g_pixels_pitch);
         if (g_pixels == NULL) {
             return 0;
         }
 
-        clear_screen();
+        /*
+         * One get_keys() per logic step, exactly as before: the one shot flags
+         * (jetpack, enter) come out of the event queue, so a single J or Enter
+         * is only ever seen by the one step that polled its event.
+         */
+        for (int step = 0; step < steps; step++) {
+            get_keys(&key_state);
 
-        // Draw all tiles
-        for (int idx = 0; idx < 41; idx++) {
-            draw_tile_centered(&block[idx]);
-            block[idx].tick(&block[idx]);
+            /*
+             * Enter, space or any of the pad's face buttons starts the game. The
+             * pad's Start raises escape as well, so this comes first and wins: on
+             * the title screen Start means "go", not "quit".
+             */
+            if (key_state.enter || key_state.space || key_state.jump ||
+                    key_state.fire || key_state.jetpack) {
+                intro_should_finish = 1;
+
+            /* Quit, or the window was closed: leave so the game can shut down. */
+            } else if (key_state.escape || key_state.quit) {
+                display_unlock();
+                return 0;
+            }
+
+            /*
+             * The picture is the state before the last tick, which is the order
+             * the tiles were drawn in when the loop drew once per step; the
+             * steps before it only advance the animation.
+             */
+            if (step == (steps - 1)) {
+                clear_screen();
+
+                // Draw all tiles
+                for (int idx = 0; idx < 41; idx++) {
+                    draw_tile_centered(&block[idx]);
+                }
+
+                draw_text_line_centered("BY JOHN ROMERO", 50);
+                draw_text_line_centered("(C) 1990 SOFTDISK, INC.", 57);
+                draw_text_line_centered("MODERNIZED BY VITOR MACHADO", 184);
+            }
+
+            for (int idx = 0; idx < 41; idx++) {
+                block[idx].tick(&block[idx]);
+            }
         }
-
-        draw_text_line_centered("BY JOHN ROMERO", 50);
-        draw_text_line_centered("(C) 1990 SOFTDISK, INC.", 57);
-        draw_text_line_centered("MODERNIZED BY VITOR MACHADO", 184);
 
         display_unlock();
         display_present();
-
-        timer_end = SDL_GetTicks();
-        delay = 14 - (timer_end-timer_begin);
-        delay = delay > 14 ? 0 : delay;
-        SDL_Delay((uint32_t)delay);
     }
 
     return 1;
@@ -1479,26 +1618,106 @@ static void clear_gameloop(game_context_t *game) {
     bullet_destroy(game->bullet);
 }
 
+/*
+ * One 14 ms logic step of the game: it advances the state it is given and
+ * draws the result into g_pixels, which is exactly what it did when the loop
+ * ran one step per frame. Only the loop around it changed, so the state
+ * machine still moves forward by a single tick per call. Returns the next
+ * state; the two states that end the game are left to the caller, which owns
+ * the framebuffer lock and the teardown.
+ */
+static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_state, int state) {
+    char level_path[4096];
+    int next_state = state;
+
+    if (state == G_STATE_NONE) {
+        clear_map(map);
+        clear_monsters(game);
+
+        if (game->level_secret_state == SECRET_LEVEL_ENTER) {
+            snprintf(level_path, 4096, "res/levels/level%ld_secret.ddt", (long)game->level);
+        } else {
+            snprintf(level_path, 4096, "res/levels/level%ld.ddt", (long)game->level);
+        }
+
+        game_level_load(game, map, level_path);
+        next_state = G_STATE_LEVEL_START;
+
+    } else if (state == G_STATE_LEVEL_START) {
+        game->dave->tile->x = game->dave->default_x;
+        game->dave->tile->y = game->dave->default_y;
+        game->scroll_offset = 0;
+        game->blinking_timer = 0;
+        game_set_scroll_to_dave(game);
+        next_state = G_STATE_LEVEL_BLINKING;
+
+    } else if (state == G_STATE_LEVEL_BLINKING) {
+        next_state = game_level_blinking(game, map, key_state);
+
+    } else if (state == G_STATE_LEVEL) {
+        next_state = game_level(game, map, key_state);
+
+    } else if (state == G_STATE_LEVEL_POPUP) {
+        next_state = game_popup_routine(game, map, key_state);
+
+    } else if (state == G_STATE_WARP_START) {
+        clear_map(map);
+        clear_monsters(game);
+
+        game->scroll_offset = 0;
+
+        if (game->in_warp == WARP_RIGHT) {
+            game_level_load(game, map, "res/levels/warp_right.ddt");
+        } else {
+            game_level_load(game, map, "res/levels/warp_down.ddt");
+            game->dave->face_direction = DAVE_DIRECTION_FRONT;
+        }
+        /* The corridor is the original 320 pixel wide screen, whatever the window. */
+        game->view_columns = DISPLAY_BASE_WIDTH / TILE_SIZE;
+        next_state = G_STATE_WARP;
+
+    } else if (state == G_STATE_WARP) {
+        next_state = game_warp(game, map, key_state);
+
+    } else if (state == G_STATE_WARP_POPUP) {
+        next_state = game_warp_popup(game, map, key_state);
+    }
+
+    return next_state;
+}
+
 static int gameloop(int starting_level) {
     game_context_t* game;
     tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT];
     keys_state_t key_state = {0};
-    char level_path[4096];
 
     int state = G_STATE_NONE;
-    int next_state;
-
-    uint64_t timer_begin;
-    uint64_t timer_end;
-    uint64_t delay;
-    uint64_t tick_interval = 14;
+    frame_pacer_t pacer;
 
     game = calloc(1, sizeof(game_context_t));
     init_game(game);
     game->level = starting_level;
 
+    pacer_init(&pacer);
+
     while (1) {
-        timer_begin = SDL_GetTicks();
+        /*
+         * How many 14 ms steps this frame owes, after the sleep that keeps the
+         * frames at 60 a second at most. Everything below runs once per frame,
+         * the state machine runs once per step.
+         */
+        int steps = pacer_begin_frame(&pacer);
+
+        if (steps == 0) {
+            /*
+             * The screen refreshes faster than the 14 ms step and none came
+             * due: nothing in the game has moved, so the frame is dropped
+             * rather than spent redrawing and presenting the same picture. The
+             * display never pulls the logic forward to fill it.
+             */
+            continue;
+        }
+
         SDL_SetRenderDrawColor(g_renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(g_renderer);
 
@@ -1512,84 +1731,37 @@ static int gameloop(int starting_level) {
             return 1;
         }
 
-        get_keys(&key_state);
+        for (int step = 0; step < steps; step++) {
+            if (state == G_STATE_GAMEOVER) {
+                display_unlock();
+                clear_gameloop(game);
+                free(game);
+                return 2;
 
-        if (state == G_STATE_NONE) {
-            clear_map(map);
-            clear_monsters(game);
-
-            if (game->level_secret_state == SECRET_LEVEL_ENTER) {
-                snprintf(level_path, 4096, "res/levels/level%ld_secret.ddt", (long)game->level);
-            } else {
-                snprintf(level_path, 4096, "res/levels/level%ld.ddt", (long)game->level);
+            } else if (state == G_STATE_QUIT_NOW) {
+                display_unlock();
+                clear_gameloop(game);
+                free(game);
+                return 1;
             }
 
-            game_level_load(game, map, level_path);
-            next_state = G_STATE_LEVEL_START;
+            /*
+             * One get_keys() per logic step, as before. The one shot flags
+             * (jetpack, key_y, key_n) are rebuilt by every call - jetpack and
+             * climb_up are zeroed, key_y/key_n reassigned from the keyboard -
+             * and the presses behind them come out of the event queue, which
+             * only hands each event to the single step that polled it. A J or a
+             * pad B pressed once therefore toggles the jetpack once, however
+             * many steps this frame runs.
+             */
+            get_keys(&key_state);
 
-        } else if (state == G_STATE_LEVEL_START) {
-            game->dave->tile->x = game->dave->default_x;
-            game->dave->tile->y = game->dave->default_y;
-            game->scroll_offset = 0;
-            game->blinking_timer = 0;
-            game_set_scroll_to_dave(game);
-            next_state = G_STATE_LEVEL_BLINKING;
-
-        } else if (state == G_STATE_LEVEL_BLINKING) {
-            next_state = game_level_blinking(game, map, &key_state);
-
-        } else if (state == G_STATE_LEVEL) {
-            next_state = game_level(game, map, &key_state);
-
-        } else if (state == G_STATE_LEVEL_POPUP) {
-            next_state = game_popup_routine(game, map, &key_state);
-
-        } else if (state == G_STATE_WARP_START) {
-            clear_map(map);
-            clear_monsters(game);
-
-            game->scroll_offset = 0;
-
-            if (game->in_warp == WARP_RIGHT) {
-                game_level_load(game, map, "res/levels/warp_right.ddt");
-            } else {
-                game_level_load(game, map, "res/levels/warp_down.ddt");
-                game->dave->face_direction = DAVE_DIRECTION_FRONT;
-            }
-            /* The corridor is the original 320 pixel wide screen, whatever the window. */
-            game->view_columns = DISPLAY_BASE_WIDTH / TILE_SIZE;
-            next_state = G_STATE_WARP;
-
-        } else if (state == G_STATE_WARP) {
-            next_state = game_warp(game, map, &key_state);
-
-        } else if (state == G_STATE_WARP_POPUP) {
-            next_state = game_warp_popup(game, map, &key_state);
-
-        } else if (state == G_STATE_GAMEOVER) {
-            display_unlock();
-            clear_gameloop(game);
-            free(game);
-            return 2;
-
-        } else if (state == G_STATE_QUIT_NOW) {
-            display_unlock();
-            clear_gameloop(game);
-            free(game);
-            return 1;
+            state = game_state_step(game, map, &key_state, state);
         }
-
-        state = next_state;
 
         // Render screen
         display_unlock();
         display_present();
-
-        // Wait for the next tick
-        timer_end = SDL_GetTicks();
-        delay = tick_interval - (timer_end-timer_begin);
-        delay = delay > tick_interval ? 0 : delay;
-        SDL_Delay((uint32_t)delay);
     }
 
     return 0;

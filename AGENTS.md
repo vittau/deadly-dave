@@ -105,7 +105,34 @@ except the icons.
   the frame scaling on the GPU and keeps the software renderer as a fallback. Do
   not pin it back to `SDL_SOFTWARE_RENDERER`. The framebuffer is a streaming
   RGBA8888 texture: lock it once per frame and write rows with `g_pixels_pitch`
-  as the stride, never with `display_width()`.
+  as the stride, never with `display_width()`. `display_init()` turns vsync on
+  (`SDL_SetRenderVSync`); a backend that refuses it only prints a line, the loop
+  paces itself anyway.
+- The logic and the frames are two different clocks, and mixing them up is the
+  easiest way to change the game speed by accident. Both loops (`start_intro()`
+  and `gameloop()`) ask `pacer_begin_frame()` how many 14 ms steps have come
+  due and run the state machine that many times, while `display_sync()`,
+  `display_lock()` / `display_unlock()` and `display_present()` stay one set per
+  frame. So a state function draws twice in a frame that owed two steps, and
+  work that belongs to the frame rather than to the tick does not go inside one.
+  The 14 ms step is the game speed (every movement, animation, timer and monster
+  tick is one step), so it is not a knob: changing it changes the whole game.
+  Keep the single `get_keys()` per step too, and do not hoist it out to once per
+  frame - the one shot flags (`jetpack`, `key_y`, `key_n`) are rebuilt by every
+  call and the presses behind them come out of the event queue, so one J reaches
+  exactly one step; polled once for two steps, one press would toggle twice.
+- The frame budget comes from the display, not from a constant:
+  `display_frame_period_ns()` reads the refresh rate of the screen the window is
+  on, every frame, because the window can be dragged to another one. It aims a
+  1/64 margin *under* one refresh on purpose. Aim over and the loop drifts past
+  each blank a little more every frame until it drops one, a hitch every few
+  seconds; aim under and it never sleeps at all and vsync alone decides when the
+  frame goes out. A rate of 0 (some backends and virtual displays) or anything
+  outside 24-360 Hz falls back to 60 Hz. A frame that owes no step is dropped
+  whole, which is why `display_sync()` runs *after* the step count and not
+  before: above ~71 fps the game presents only when the logic actually moved.
+  `LOGIC_MAX_STEPS` caps the catch-up, so a dragged window or a suspend skips
+  the time it missed instead of replaying it.
 - `render_tile_idx` is the hot path (the visible level is ~1000 tiles of 64
   pixels each frame): it resolves the source and destination rows once per line,
   skips whole rows out of view and reads `surface->pitch`. Keep any change to

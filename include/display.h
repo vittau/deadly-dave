@@ -79,6 +79,13 @@ int  display_center_offset(void);
 /* Horizontal shift for elements that used to be glued to the right edge. */
 int  display_right_offset(void);
 
+/*
+ * How long one frame of the display the window sits on lasts, in nanoseconds,
+ * which is how often it is worth putting a picture on the screen. Falls back to
+ * 60 Hz whenever the refresh rate is unknown or not believable.
+ */
+uint64_t display_frame_period_ns(void);
+
 uint32_t *display_lock(int *pitch_in_pixels);
 void display_unlock(void);
 void display_present(void);
