@@ -7,6 +7,16 @@ Main focus:
  1. Replicate look & feel.
  2. Run on modern systems.
 
+### Controls
+
+| Action        | Keys                        |
+| ------------- | --------------------------- |
+| Move          | `A` / `D`, or left / right  |
+| Jump          | `W`, or up                  |
+| Climb down    | `S`, or down                |
+| Shoot         | `Space`, or left Ctrl       |
+| Jetpack       | `J`                         |
+
 ### Building
 
 The game needs **SDL 3.4.16** or newer and nothing else.

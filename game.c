@@ -407,14 +407,18 @@ static void toggle_fullscreen(void) {
 void get_keys(keys_state_t* state) {
     SDL_Event event;
 
+    /*
+     * WASD, with the arrow keys kept as an alternative. W is jump, S climbs
+     * down and the space bar shoots, Ctrl still does too.
+     */
     const bool *keystate = SDL_GetKeyboardState(NULL);
-    state->right      = (keystate[SDL_SCANCODE_RIGHT]  != 0) ? 1 : 0;
-    state->left       = (keystate[SDL_SCANCODE_LEFT]   != 0) ? 1 : 0;
-    state->jump       = (keystate[SDL_SCANCODE_UP]     != 0) ? 1 : 0;
-    state->down       = (keystate[SDL_SCANCODE_DOWN]   != 0) ? 1 : 0;
+    state->right      = (keystate[SDL_SCANCODE_RIGHT] != 0 || keystate[SDL_SCANCODE_D] != 0) ? 1 : 0;
+    state->left       = (keystate[SDL_SCANCODE_LEFT]  != 0 || keystate[SDL_SCANCODE_A] != 0) ? 1 : 0;
+    state->jump       = (keystate[SDL_SCANCODE_UP]    != 0 || keystate[SDL_SCANCODE_W] != 0) ? 1 : 0;
+    state->down       = (keystate[SDL_SCANCODE_DOWN]  != 0 || keystate[SDL_SCANCODE_S] != 0) ? 1 : 0;
     state->escape     = (keystate[SDL_SCANCODE_ESCAPE] != 0) ? 1 : 0;
-    state->fire       = (keystate[SDL_SCANCODE_LCTRL]  != 0) ? 1 : 0;
-    state->space      = (keystate[SDL_SCANCODE_SPACE]  != 0) ? 1 : 0;
+    state->fire       = (keystate[SDL_SCANCODE_SPACE] != 0 || keystate[SDL_SCANCODE_LCTRL] != 0) ? 1 : 0;
+    state->space      = (keystate[SDL_SCANCODE_SPACE] != 0) ? 1 : 0;
     state->key_y      = (keystate[SDL_SCANCODE_Y] != 0) ? 1 : 0;
     state->key_n      = (keystate[SDL_SCANCODE_N] != 0) ? 1 : 0;
 
@@ -428,7 +432,8 @@ void get_keys(keys_state_t* state) {
             //int modifier = event.key.mod;
             //int scancode = event.key.scancode;
             //printf("mod: %d, scan: %d, repeat: %d \n", modifier, scancode, is_repeat);
-            if (event.key.scancode == SDL_SCANCODE_LALT) {
+            /* Edge triggered: the jetpack is a toggle, holding the key is not meant to flip it. */
+            if (event.key.scancode == SDL_SCANCODE_J && is_repeat == 0) {
                 state->jetpack = 1;
             }
             if (event.key.scancode == SDL_SCANCODE_RETURN && is_repeat == 0) {

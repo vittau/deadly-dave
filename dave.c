@@ -173,7 +173,7 @@ void dave_state_walking_enter(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_H
 void dave_state_jetpacking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_down, int key_jetpack) {
 
-    // Pressing jetpack key (alt) while in 'jetpack-state' will turn it off
+    // Pressing the jetpack key (J) while in 'jetpack-state' will turn it off
     if (key_jetpack) {
         dave_state_standing_enter(dave, map, key_left, key_right, key_up);
         return;
@@ -287,7 +287,7 @@ void dave_state_walking_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP
         dave->sfx->play(dave->sfx, TUNE_FALLING);
         return;
     }
-    if (key_up) {
+    if (dave->jump_pressed) {
         if (dave->jump_cooldown_count <= 0) {
             dave_state_jumping_enter(dave, map, key_left, key_right, key_up);
             return;
@@ -609,18 +609,16 @@ static void dave_state_standing_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH *
         dave->jump_cooldown_count--;
     }
 
-    if (key_up) {
-        if (dave->on_tree) {
-            dave_state_climbing_enter(dave, map, key_left, key_right, key_up, key_jetpack);
-            return;
-        }
-
-        if (dave->jump_cooldown_count <= 0) {
-            dave_state_jumping_enter(dave, map, key_left, key_right, key_up);
-            return;
-        }
-
+    if (key_up && dave->on_tree) {
+        dave_state_climbing_enter(dave, map, key_left, key_right, key_up, key_jetpack);
+        return;
     }
+
+    if (dave->jump_pressed && dave->jump_cooldown_count <= 0) {
+        dave_state_jumping_enter(dave, map, key_left, key_right, key_up);
+        return;
+    }
+
     if (key_left || key_right) {
         dave_state_walking_enter(dave, map, key_left, key_right, key_up);
         return;
@@ -629,6 +627,10 @@ static void dave_state_standing_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH *
 
 static void dave_tick(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT],
         int key_left, int key_right, int key_up, int key_down, int key_jetpack) {
+    /* The frame the jump key goes down, used to start a jump from the ground. */
+    dave->jump_pressed = (key_up != 0) && (dave->key_up_prev == 0);
+    dave->key_up_prev = (key_up != 0);
+
     if (dave->state == DAVE_STATE_STANDING) {
         dave_state_standing_routine(dave, map, key_left, key_right, key_up, key_jetpack);
     } else if (dave->state == DAVE_STATE_WALKING) {
@@ -795,6 +797,8 @@ dave_t* dave_create(soundfx_t *sfx, int x, int y) {
     dave->face_direction = DAVE_DIRECTION_FRONTR;
     dave->jump_cooldown_count = 0;
     dave->jump_state = 0;
+    dave->jump_pressed = 0;
+    dave->key_up_prev = 0;
     dave->has_trophy = 0;
     dave->has_gun = 0;
     dave->jetpack_bars = 0;

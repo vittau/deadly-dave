@@ -64,6 +64,14 @@ typedef struct dave_struct {
     int jump_state;
     int jump_cooldown_count;
     int climb_state;
+    /*
+     * Jump is edge triggered: it only starts on the frame the key goes from up
+     * to down while Dave is on the ground. A press while in the air is dropped
+     * instead of being remembered for the landing. key_up_prev is the held
+     * state of the key on the previous tick.
+     */
+    int jump_pressed;
+    int key_up_prev;
     int default_x;
     int default_y;
 
