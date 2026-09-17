@@ -65,10 +65,11 @@ int  display_init(SDL_Renderer *renderer, int scale_mode);
 void display_quit(void);
 
 /*
- * Re-reads the current window size and rebuilds the framebuffer when needed.
- * Returns 1 when the framebuffer width changed.
+ * Re-reads the current window size and rebuilds the framebuffer and the texture
+ * to match, so a resize or a filter change is picked up before anything is
+ * drawn into the frame.
  */
-int  display_sync(void);
+void display_sync(void);
 void display_toggle_scale_mode(void);
 /* Turns vertical sync on the renderer on or off, for the pause menu's V-SYNC option. */
 void display_set_vsync(int enabled);

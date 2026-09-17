@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
             argv++;
             if (argc < 1) {
                 usage();
-                exit(-1);
+                return 1;
             }
             level = atoi(argv[0]);
             argc--;
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 
         } else {
             usage();
-            return 0;
+            return 1;
         }
     }
 

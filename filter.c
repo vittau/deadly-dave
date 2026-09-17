@@ -203,14 +203,17 @@ static int ensure_ntsc(void) {
 }
 
 static int ensure_input(size_t pixels) {
+    uint16_t *grown;
+
     if (g_input_pixels >= pixels) {
         return 1;
     }
-    g_input = (uint16_t *)realloc(g_input, pixels * sizeof(uint16_t));
-    if (g_input == NULL) {
-        g_input_pixels = 0;
+    /* Grow into a temporary, so a failed realloc keeps the buffer we still have. */
+    grown = (uint16_t *)realloc(g_input, pixels * sizeof(uint16_t));
+    if (grown == NULL) {
         return 0;
     }
+    g_input = grown;
     g_input_pixels = pixels;
     return 1;
 }

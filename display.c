@@ -230,19 +230,17 @@ void display_quit(void) {
     g_display_renderer = NULL;
 }
 
-int display_sync(void) {
+void display_sync(void) {
     display_geometry_t next;
     int out_w = 0;
     int out_h = 0;
-    int resized;
 
     if (g_display_renderer == NULL) {
-        return 0;
+        return;
     }
 
     SDL_GetCurrentRenderOutputSize(g_display_renderer, &out_w, &out_h);
     next = display_compute_geometry(out_w, out_h, g_scale_mode);
-    resized = next.width != g_geometry.width;
 
     g_geometry = next;
     display_build_frame();
@@ -253,8 +251,6 @@ int display_sync(void) {
      */
     display_build_texture(filter_output_width(g_geometry.width),
         filter_output_height(DISPLAY_HEIGHT, g_geometry.dst.h));
-
-    return resized;
 }
 
 /*

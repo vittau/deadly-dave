@@ -57,8 +57,8 @@ static const char *g_filter_labels[FILTER_MODE_COUNT] = {
 static void toggle_fullscreen(void);
 /* Defined further down, alongside the rest of the level HUD drawing. */
 static void draw_level_frame(game_context_t *game);
-/* Defined further down, alongside the level file loading it wraps. */
-static void game_load_current_level(game_context_t *game, tile_t *map);
+/* Defined further down, alongside the level file loading it wraps. Returns 0 or a load error. */
+static int game_load_current_level(game_context_t *game, tile_t *map);
 /* Defined further down, alongside the rest of the secret level handling. */
 static int game_level_has_secret(int level);
 
@@ -470,9 +470,10 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
 /*
  * Applies the currently selected row; QUIT is handled by the caller instead.
  * WARP jumps straight to a level and loads it right away, so the scene behind
- * the menu shows it immediately instead of only once the menu closes.
+ * the menu shows it immediately instead of only once the menu closes. Returns
+ * 0, or a load error from the WARP row.
  */
-static void pause_menu_apply_option(game_context_t *game, tile_t *map, int option) {
+static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option) {
     switch (option) {
     case PAUSE_OPTION_VSYNC:
         g_vsync_enabled = !g_vsync_enabled;
@@ -500,11 +501,11 @@ static void pause_menu_apply_option(game_context_t *game, tile_t *map, int optio
         }
         game->score = 0;
         game->pause_level_changed = 1;
-        game_load_current_level(game, map);
-        break;
+        return game_load_current_level(game, map);
     default:
         break;
     }
+    return 0;
 }
 
 static void draw_pause_menu(game_context_t *game) {
@@ -605,7 +606,10 @@ static int game_pause_menu(game_context_t *game, tile_t *map, keys_state_t *keys
         if (game->pause_selected == PAUSE_OPTION_QUIT) {
             return G_STATE_QUIT_NOW;
         }
-        pause_menu_apply_option(game, map, game->pause_selected);
+        if (pause_menu_apply_option(game, map, game->pause_selected) != 0) {
+            /* A WARP row whose level could not be read has nothing left to show. */
+            return G_STATE_QUIT_NOW;
+        }
     }
 
     /*
@@ -1777,6 +1781,11 @@ static int game_warp(game_context_t *game, tile_t *map, keys_state_t *keys) {
     return G_STATE_WARP;
 }
 
+/*
+ * Reads a .ddt into map, spawning Dave and the monsters it names. Returns 0 on
+ * success and a negative code on failure (missing file, short read, malformed
+ * tag), so the caller can shut down instead of the process exiting from here.
+ */
 static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     int i = 0;
     long fsize;
@@ -1790,14 +1799,30 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     FILE* f = fopen(file, "rb");
     if (f == NULL) {
         printf("Error loading level file: %s \n", file);
-        exit(0);
+        return -4;
     }
     fseek(f, 0, SEEK_END);
     fsize = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    buf = malloc(fsize + 1);
-    fread(buf, 1, fsize, f);
+    if (fsize < 0) {
+        printf("Could not read level file: %s \n", file);
+        fclose(f);
+        return -5;
+    }
+
+    buf = malloc((size_t)fsize + 1);
+    if (buf == NULL) {
+        printf("Could not allocate the level file: %s \n", file);
+        fclose(f);
+        return -6;
+    }
+    if (fread(buf, 1, (size_t)fsize, f) != (size_t)fsize) {
+        printf("Could not read level file: %s \n", file);
+        free(buf);
+        fclose(f);
+        return -7;
+    }
     fclose(f);
 
     buf[fsize] = 0;
@@ -1899,10 +1924,12 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
  * Loads game->level into map and resets Dave to its start, the same load
  * G_STATE_NONE and G_STATE_LEVEL_START do together over two ticks. The pause
  * menu's WARP row calls this directly so the scene behind the box shows the
- * new level right away instead of only once the menu closes.
+ * new level right away instead of only once the menu closes. Returns 0, or the
+ * load error so the caller can quit.
  */
-static void game_load_current_level(game_context_t *game, tile_t *map) {
+static int game_load_current_level(game_context_t *game, tile_t *map) {
     char level_path[4096];
+    int rc;
 
     clear_map(map);
     clear_monsters(game);
@@ -1913,7 +1940,10 @@ static void game_load_current_level(game_context_t *game, tile_t *map) {
         snprintf(level_path, sizeof(level_path), "res/levels/level%ld.ddt", (long)game->level);
     }
 
-    game_level_load(game, map, level_path);
+    rc = game_level_load(game, map, level_path);
+    if (rc != 0) {
+        return rc;
+    }
 
     game->dave->tile->x = game->dave->default_x;
     game->dave->tile->y = game->dave->default_y;
@@ -1922,6 +1952,7 @@ static void game_load_current_level(game_context_t *game, tile_t *map) {
     game->scroll_offset = 0;
     game->blinking_timer = 0;
     game_set_scroll_to_dave(game);
+    return 0;
 }
 
 /*
@@ -2012,7 +2043,9 @@ static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_
             snprintf(level_path, 4096, "res/levels/level%ld.ddt", (long)game->level);
         }
 
-        game_level_load(game, map, level_path);
+        if (game_level_load(game, map, level_path) != 0) {
+            return G_STATE_QUIT_NOW;
+        }
         next_state = G_STATE_LEVEL_START;
 
     } else if (state == G_STATE_LEVEL_START) {
@@ -2033,15 +2066,21 @@ static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_
         next_state = game_popup_routine(game, map, key_state);
 
     } else if (state == G_STATE_WARP_START) {
+        int rc;
         clear_map(map);
         clear_monsters(game);
 
         game->scroll_offset = 0;
 
         if (game->in_warp == WARP_RIGHT) {
-            game_level_load(game, map, "res/levels/warp_right.ddt");
+            rc = game_level_load(game, map, "res/levels/warp_right.ddt");
         } else {
-            game_level_load(game, map, "res/levels/warp_down.ddt");
+            rc = game_level_load(game, map, "res/levels/warp_down.ddt");
+        }
+        if (rc != 0) {
+            return G_STATE_QUIT_NOW;
+        }
+        if (game->in_warp != WARP_RIGHT) {
             game->dave->face_direction = DAVE_DIRECTION_FRONT;
         }
         /* The corridor is the original 320 pixel wide screen, whatever the window. */
@@ -2266,6 +2305,11 @@ int game_main(int is_windowed, int starting_level) {
     }
 
     g_soundfx = soundfx_create();
+    if (g_soundfx == NULL) {
+        /* The game plays its tunes through Dave and the popups, so it needs them. */
+        printf("Failed to create the sound effects. \n");
+        return game_shutdown();
+    }
 
     while (1) {
         if (!start_intro()) {
