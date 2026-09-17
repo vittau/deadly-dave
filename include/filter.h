@@ -27,9 +27,6 @@
 void filter_set_mode(int mode);
 int  filter_mode(void);
 
-/* True when the selected mode runs the NTSC filter. */
-int  filter_ntsc_enabled(void);
-
 /*
  * Width of the filtered image for a given source width. NTSC widens the image
  * (7 output columns per 3 input columns); the other modes leave it alone.

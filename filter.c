@@ -63,7 +63,7 @@ int filter_mode(void) {
     return g_mode;
 }
 
-int filter_ntsc_enabled(void) {
+static int filter_ntsc_enabled(void) {
     return g_mode == FILTER_NTSC || g_mode == FILTER_BOTH;
 }
 

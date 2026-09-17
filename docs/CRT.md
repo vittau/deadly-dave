@@ -125,8 +125,9 @@ bits are shifted into the output byte positions.
 | Preset            | Look                                                         |
 | ----------------- | ------------------------------------------------------------ |
 | `ntsc_composite`  | Colour bleeding **and** artefacts (rainbow edges). Default NTSC. |
-| `ntsc_svideo`     | Bleeding only, no cross-colour artefacts; sharper.           |
-| `ntsc_rgb`        | Crisp, almost no analogue artefacts.                        |
+
+The port keeps only composite, the look the game draws with; snes_ntsc's
+`svideo` and `rgb` presets are not carried over because nothing selects them.
 
 Blargg's own forum posts describing all of the above are the best primary source
 next to the library header.

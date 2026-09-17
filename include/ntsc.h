@@ -34,10 +34,8 @@ typedef struct ntsc_setup_struct {
     float bleed;      /* colour bleed (reduced colour resolution)           */
 } ntsc_setup_t;
 
-/* The three classic connection presets; composite is the full NTSC look. */
+/* The full NTSC look, which is what the game uses; `setup` NULL means this one. */
 extern const ntsc_setup_t ntsc_composite;
-extern const ntsc_setup_t ntsc_svideo;
-extern const ntsc_setup_t ntsc_rgb;
 
 typedef struct ntsc_filter_struct ntsc_filter_t;
 

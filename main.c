@@ -10,7 +10,7 @@
 #include "game.h"
 
 #if defined LINUX || __linux__ || _LINUX
-void sigseg_handler(int sig) {
+static void sigseg_handler(int sig) {
     void *array[10];
     size_t size;
 

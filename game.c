@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <math.h>
 
 /* access() and chdir() are POSIX; MSVC has them in io.h/direct.h, underscored. */
 #if defined(_WIN32)
@@ -1297,14 +1296,10 @@ static int game_adjust_scroll_to_dave(game_context_t *game) {
     if (game->scroll_remaining != 0) {
         if (game->scroll_remaining > 0) {
             game->scroll_remaining--;
-            if ((game->scroll_remaining % 1) == 0) {
-                game->scroll_offset++;
-            }
+            game->scroll_offset++;
         } else if (game->scroll_remaining < 0) {
             game->scroll_remaining++;
-            if ((game->scroll_remaining % 1) == 0) {
-                game->scroll_offset--;
-            }
+            game->scroll_offset--;
         }
         return 1;
     }
@@ -1790,7 +1785,6 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     int pos = 0, cur_col = 0;
     int in_comment = 0;
     char tag[4] = {0, 0, 0, 0};
-    char *map_str = NULL;
 
     int monsters_count = 0;
     FILE* f = fopen(file, "rb");
@@ -1807,17 +1801,16 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
     fclose(f);
 
     buf[fsize] = 0;
-    map_str = buf;
 
-    while (map_str[i] != 0) {
+    while (buf[i] != 0) {
         if (in_comment) {
-            if (map_str[i] == '\n' || map_str[i] == '\r') {
+            if (buf[i] == '\n' || buf[i] == '\r') {
                 in_comment = 0;
             }
         } else {
-            if (map_str[i] == '#') {
+            if (buf[i] == '#') {
                 in_comment = 1;
-            } else if (map_str[i] == ',') {
+            } else if (buf[i] == ',') {
                 if (collected_count == 3) {
                     collected_count = 0;
                     if ((strcmp(tag, " D ") == 0) || (strcmp(tag, "D+M") == 0)) {
@@ -1858,7 +1851,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                     free(buf);
                     return -1;
                 }
-            } else if (map_str[i] == ';') {
+            } else if (buf[i] == ';') {
                 if (collected_count == 3) {
                     collected_count = 0;
                     tile_create(&map[cur_col * TILEMAP_HEIGHT + pos], tag, cur_col*16, pos*16);
@@ -1868,7 +1861,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                     free(buf);
                     return -2;
                 }
-            } else if (map_str[i] == '\n' || map_str[i] == '\r') {
+            } else if (buf[i] == '\n' || buf[i] == '\r') {
                 /*
                  * A newline closes the column just like the ';' does when a
                  * whole tag is waiting. level8.ddt shipped without the ';' at
@@ -1887,7 +1880,7 @@ static int game_level_load(game_context_t *game, tile_t *map, char *file) {
                     free(buf);
                     return -3;
                 }
-                tag[collected_count] = map_str[i];
+                tag[collected_count] = buf[i];
                 collected_count++;
             }
         }
@@ -2093,8 +2086,8 @@ static int gameloop(int starting_level) {
 
     while (1) {
         /*
-         * How many 14 ms steps this frame owes, after the sleep that keeps the
-         * frames at 60 a second at most. Everything below runs once per frame,
+         * How many 14 ms steps this frame owes, after the pacer has waited out
+         * the FPS LIMIT budget for it. Everything below runs once per frame,
          * the state machine runs once per step.
          */
         int steps = pacer_begin_frame(&pacer);
@@ -2191,9 +2184,6 @@ int game_main(int is_windowed, int starting_level) {
         printf("Failed to initialize SDL video. Error: (%s) \n", SDL_GetError());
         return -1;
     }
-
-    // This might start audio for some Intel Display Audio Drivers in Windows
-    // SDL_setenv_unsafe("SDL_AUDIODRIVER", "directsound", 1);
 
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
         printf("Failed to initialize SDL audio. Error: (%s) \n", SDL_GetError());

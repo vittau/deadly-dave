@@ -54,8 +54,6 @@
 enum { ntsc_black = 0 };
 
 const ntsc_setup_t ntsc_composite = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-const ntsc_setup_t ntsc_svideo    = { 0, 0, 0, 0, .2f, 0, .2f, -1, -1, 0 };
-const ntsc_setup_t ntsc_rgb       = { 0, 0, 0, 0, .2f, 0, .7f, -1, -1, -1 };
 
 /* Packed signed RGB used inside the kernels. */
 #define NTSC_PACK_RGB(r, g, b) ((r) << 21 | (g) << 11 | (b) << 1)

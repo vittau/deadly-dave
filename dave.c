@@ -422,11 +422,6 @@ static void dave_state_jumping_routine(dave_t *dave, tile_t map[TILEMAP_WIDTH * 
         }
     }
 
-    // Temporary check
-    if (dave->jump_state > 94) {
-        exit(0);
-    }
-
     // Handle X axis with respect of walking state cooldown
     if (dave->walk_state == DAVE_STATE_STANDING) {
         if (key_left) {
