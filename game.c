@@ -209,6 +209,16 @@ static void draw_text_line_black(const char *line, int x, int y) {
     }
 }
 
+/*
+ * Draws a line centred on the framebuffer. The font tiles are 8 pixels wide, so
+ * the width of the line is known without measuring anything.
+ */
+static void draw_text_line_centered(const char *line, int y) {
+    int width = (int)strlen(line) * 8;
+
+    draw_text_line(line, (display_width() - width) / 2, y);
+}
+
 static void draw_popup_box(int x, int y, int rows, int columns) {
     // Four corners
     render_tile_idx(SPRITE_IDX_POPUP_BOX_T1, x, y);
@@ -773,19 +783,15 @@ static int start_intro(void) {
 
         clear_screen();
 
-        // The intro screen is a fixed 320 pixel wide picture, so it is centered
-        // instead of being spread over the whole framebuffer.
-        int offset = display_center_offset();
-
         // Draw all tiles
         for (int idx = 0; idx < 41; idx++) {
             draw_tile_centered(&block[idx]);
             block[idx].tick(&block[idx]);
         }
 
-        draw_text_line("BY JOHN ROMERO", 110 + offset, 50);
-        draw_text_line("(C) 1990 SOFTDISK, INC.", 79 + offset, 57);
-        draw_text_line("MODERNIZED BY VITOR MACHADO", 52 + offset, 184);
+        draw_text_line_centered("BY JOHN ROMERO", 50);
+        draw_text_line_centered("(C) 1990 SOFTDISK, INC.", 57);
+        draw_text_line_centered("MODERNIZED BY VITOR MACHADO", 184);
 
         display_unlock();
         display_present();
