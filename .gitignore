@@ -11,4 +11,6 @@ tests/test_display
 
 out/**
 
+original/
+
 .DS_Store
