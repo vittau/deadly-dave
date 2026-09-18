@@ -1,5 +1,7 @@
 # Deadly Dave
 
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/vittau)
+
 ![Level 2, whole, on a wide viewport](res/screenshots/screen4.png)
 
 An open source reimplementation of *Dangerous Dave*, a 1988 DOS game by John
