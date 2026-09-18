@@ -171,8 +171,11 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
 - The font is 8x6 glyph tiles: `res/font/<name>.bmp` is `res/tiles/tile(500+index).bmp`
   (white glyph on transparent) and `res/font/black/<name>.bmp` is
   `tile(600+index).bmp` (black glyph on white), `index` being the glyph's place
-  in `font_chars[]` (`A-Z`, `0-9`, space, `, . ( ) ! ? - '`). A new glyph needs
-  both BMPs and the character appended to `font_chars[]`.
+  in `font_chars[]` (`A-Z`, `0-9`, space, `, . ( ) ! ? - ' :`). A new glyph needs
+  both BMPs, `res/font/<name>.bmp` and `res/font/black/<name>.bmp` (byte for byte
+  the two tiles), and the character appended to the **end** of `font_chars[]`:
+  the place in that string is the offset from tile 500, so inserting one in the
+  middle would hand every glyph after it its neighbour's tile.
 
 ## Gotchas
 
@@ -293,14 +296,36 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
 - `get_keys()` writes `keys_state.enter` and `.quit` and never clears them, and
   only the intro reads `enter`. Do not use them as edge triggered inside the
   game loop.
+- F10 is a development shortcut that jumps to the ending screen from any game
+  state, so the last screen can be looked at without playing the ten levels. It
+  is a one shot flag on `keys_state_t.congrats`, set by `get_keys()` and read at
+  the top of `game_state_step()`; the ending itself then starts a fresh run on
+  level 5, as it does after the last level. Not F11: macOS takes that key for
+  "Show Desktop", so it never reaches the window.
 - The intro is authored as a 320 pixel wide picture: `draw_tile_centered()` puts
   the tiles in the middle of the framebuffer (the maze is 80..240 wide on a 320
   pixel one) and the three text lines go through `draw_text_line_centered()`,
   which assumes 8 pixel wide font tiles. Add text through that helper rather
   than hand tuning an x offset; the title screen has no F1 help screen, that line
   was removed. `draw_char()` finds a glyph by looking it up in `font_chars[]` (A-Z,
-  0-9, then `space , . ( ) ! ?`) and adds the offset to the 500 or 600 tile
+  0-9, then `space , . ( ) ! ? - ' :`) and adds the offset to the 500 or 600 tile
   block, so that order has to keep matching the font tiles in `res/font`.
+- The ending screen is a box of 16 pixel grail tiles sized around its text and
+  centered on the framebuffer, with black around it, not a frame spanning the
+  window: the widest line and the block of lines, each with 4 pixels of air,
+  rounded up to whole tiles and framed by one more on every side. For the text the
+  original ships that comes to 20x10 tiles, 320x160, which is why it lands exactly
+  on the width of the original screen and keeps that size on a wider one. The
+  lines are therefore centered against the box by hand, not with
+  `draw_text_line_centered()`. `draw_grail_frame()` walks the box clockwise (top,
+  right, bottom, left) and `draw_grail()` draws each grail one animation frame
+  further along than the one before it, so the five frames travel around the frame
+  as a wave instead of every grail glowing in step; the four corners are drawn
+  once, by the top and the bottom row. The box is centered on the **scene**, not
+  on the framebuffer: `display_compute_geometry()` shifts the picture down by half
+  the difference between the two HUD bars so the scene looks centered on the
+  screen, and this is the one screen with no HUD on it, so a box centered on the
+  framebuffer sits 9 pixels low.
 
 ## Conventions
 

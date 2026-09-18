@@ -32,6 +32,12 @@
 #define WARP_DOWN  2
 
 typedef struct keys_state_struct {
+    /*
+     * Development shortcut: F10 raises it to jump to the ending screen from
+     * wherever the game is, so the last screen does not have to be played to.
+     * Not F11: macOS takes that one for "Show Desktop".
+     */
+    int32_t congrats;
     int32_t jump;
     /*
      * Up without jumping: only climbs and flies, used by the controller's up

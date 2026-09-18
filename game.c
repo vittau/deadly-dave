@@ -91,6 +91,13 @@ static const int blended_sprites[] = {
 static uint8_t g_blended[1000];
 
 /*
+ * The window's title, which the title bar, the taskbar and the macOS Dock and
+ * window menu all read. The double-clickable macOS bundle shows its own
+ * CFBundleName instead.
+ */
+#define GAME_TITLE "Deadly Dave"
+
+/*
  * Paints the parts of the scene outside the centered 320 pixel wide picture
  * black. The warp corridor is such a picture, and its level data continues
  * past the right edge of it, so the rest has to be hidden. Only the scene
@@ -257,7 +264,7 @@ static void draw_tile_centered(tile_t *tile) {
 }
 
 /* The font tiles follow this order, 100 indices apart for the black set. */
-static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?-'";
+static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?-':";
 
 static void draw_char(char c, int x, int y, int is_black) {
     const char *letter = memchr(font_chars, c, sizeof(font_chars) - 1);
@@ -973,6 +980,8 @@ static void get_keys(keys_state_t* state) {
     state->jetpack = 0;
     /* Enter is otherwise only ever raised by the KEY_DOWN case below or a gamepad event. */
     state->enter = 0;
+    /* F10 is one shot too, and read by game_state_step() on the step that sees it. */
+    state->congrats = 0;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_KEY_DOWN) {
             int is_repeat = event.key.repeat;
@@ -989,6 +998,10 @@ static void get_keys(keys_state_t* state) {
             }
             if (event.key.scancode == SDL_SCANCODE_F5 && is_repeat == 0) {
                 toggle_scale_mode();
+            }
+            /* Development shortcut: look at the ending without playing to it. */
+            if (event.key.scancode == SDL_SCANCODE_F10 && is_repeat == 0) {
+                state->congrats = 1;
             }
         } else if (event.type == SDL_EVENT_QUIT) {
             state->quit = 1;
@@ -2005,14 +2018,64 @@ static int game_load_current_level(game_context_t *game, tile_t *map) {
     return 0;
 }
 
+/* The grails of the ending's frame, in animation order. */
+static const int g_grail_frames[] = {
+    SPRITE_IDX_TROPHY0, SPRITE_IDX_TROPHY1, SPRITE_IDX_TROPHY2,
+    SPRITE_IDX_TROPHY3, SPRITE_IDX_TROPHY4
+};
+#define GRAIL_FRAME_COUNT ((int)(sizeof(g_grail_frames) / sizeof(g_grail_frames[0])))
+
+/*
+ * Draws one grail of that frame, one animation frame further along than the one
+ * drawn before it, and moves `step` on. The five frames then travel around the
+ * frame of trophies as a wave (1 2 3 4 5 1 ...) instead of every grail glowing
+ * in step; `phase` is what the clock advances.
+ */
+static void draw_grail(int x, int y, int phase, int *step) {
+    int index = (phase + *step) % GRAIL_FRAME_COUNT;
+
+    render_tile_idx(g_grail_frames[index], x, y);
+    (*step)++;
+}
+
+/*
+ * Draws that frame around the ending's text: `columns` by `rows` grails with the
+ * top left one at (x, y), walked clockwise so the wave keeps travelling the same
+ * way round the box. The four corners are drawn once, by the top and the bottom
+ * row.
+ */
+static void draw_grail_frame(int x, int y, int columns, int rows, int phase) {
+    int step = 0;
+    int i;
+
+    /* Along the top, down the right side, back along the bottom, up the left. */
+    for (i = 0; i < columns; i++) {
+        draw_grail(x + (i * TILE_SIZE), y, phase, &step);
+    }
+    for (i = 1; i < rows - 1; i++) {
+        draw_grail(x + ((columns - 1) * TILE_SIZE), y + (i * TILE_SIZE), phase, &step);
+    }
+    for (i = columns - 1; i >= 0; i--) {
+        draw_grail(x + (i * TILE_SIZE), y + ((rows - 1) * TILE_SIZE), phase, &step);
+    }
+    for (i = rows - 2; i >= 1; i--) {
+        draw_grail(x, y + (i * TILE_SIZE), phase, &step);
+    }
+}
+
 /*
  * The ending screen, shown once the last level is done: the text the original
  * puts in the executable, inside a frame of grails (the trophies that open a
- * level's door). Any key or pad button starts a fresh run on level 5.
+ * level's door). The line under the title carries the score the run ended on,
+ * which is the last place the player gets to see it. Any key or pad button
+ * starts a fresh run on level 5.
  */
 static int game_congrats(game_context_t *game, keys_state_t *keys) {
-    static const char *lines[] = {
+    char points[16];
+    const char *lines[] = {
         "CONGRATULATIONS!",
+        /* Filled in below; the array is built per frame so it can hold it. */
+        points,
         "",
         "YOU MADE IT THROUGH ALL THE PERIL-",
         "OUS AREAS IN CLYDE'S HIDEOUT!",
@@ -2027,33 +2090,73 @@ static int game_congrats(game_context_t *game, keys_state_t *keys) {
         "PRESS ANY BUTTON"
     };
 
+    /* Five digits with leading zeroes, the way the HUD's score is drawn. */
+    snprintf(points, sizeof(points), "POINTS: %05lu", (unsigned long)game->score);
+
     if (keys->quit) {
         return G_STATE_QUIT_NOW;
     }
 
     clear_screen();
 
-    /* A frame of grails around the picture, with their glow animation. */
+    /*
+     * The frame wraps the text rather than the window, and the box it makes is
+     * centered with black around it: the widest line and the block of lines,
+     * each with the few pixels of air the original 320 pixel screen had around
+     * them, rounded up to whole grails and framed by one more on every side.
+     * The text is broken into those lines for that screen, so the box is 320
+     * pixels wide however wide the window is.
+     */
     {
-        static const int grail[] = {
-            SPRITE_IDX_TROPHY0, SPRITE_IDX_TROPHY1, SPRITE_IDX_TROPHY2,
-            SPRITE_IDX_TROPHY3, SPRITE_IDX_TROPHY4
-        };
-        static int tick = 0;
-        int frame = grail[(tick++ / 10) % 5];
+        const int line_count = (int)(sizeof(lines) / sizeof(lines[0]));
+        const int line_height = 8;
+        const int text_height = ((line_count - 1) * line_height) + 6;
+        const int text_margin = 4;
+        int text_width = 0;
+        int interior_width;
+        int interior_height;
+        int box_columns;
+        int box_rows;
+        int box_x;
+        int box_y;
+        int text_top;
+        int i;
 
-        for (int x = 0; x < display_width(); x += TILE_SIZE) {
-            render_tile_idx(frame, x, DISPLAY_SCENE_TOP);
-            render_tile_idx(frame, x, DISPLAY_SCENE_BOTTOM - TILE_SIZE);
-        }
-        for (int y = DISPLAY_SCENE_TOP + TILE_SIZE; y < DISPLAY_SCENE_BOTTOM - TILE_SIZE; y += TILE_SIZE) {
-            render_tile_idx(frame, 0, y);
-            render_tile_idx(frame, display_width() - TILE_SIZE, y);
-        }
-    }
+        for (i = 0; i < line_count; i++) {
+            int width = (int)strlen(lines[i]) * 8;
 
-    for (int i = 0; i < (int)(sizeof(lines) / sizeof(lines[0])); i++) {
-        draw_text_line_centered(lines[i], 44 + (i * 10));
+            if (width > text_width) {
+                text_width = width;
+            }
+        }
+
+        interior_width = ((text_width + (2 * text_margin) + TILE_SIZE - 1) / TILE_SIZE) * TILE_SIZE;
+        interior_height = ((text_height + (2 * text_margin) + TILE_SIZE - 1) / TILE_SIZE) * TILE_SIZE;
+        box_columns = (interior_width / TILE_SIZE) + 2;
+        box_rows = (interior_height / TILE_SIZE) + 2;
+        box_x = (display_width() - (box_columns * TILE_SIZE)) / 2;
+        /*
+         * Centered on the scene, not on the framebuffer: display_compute_geometry()
+         * pushes the picture down by half the difference between the two HUD bars
+         * so that the scene is what looks centered on the screen. This screen draws
+         * no HUD, and a box centered on the framebuffer would sit that much low.
+         */
+        box_y = DISPLAY_SCENE_TOP +
+            (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (box_rows * TILE_SIZE)) / 2);
+        text_top = box_y + TILE_SIZE + ((interior_height - text_height) / 2);
+
+        {
+            static int tick = 0;
+
+            draw_grail_frame(box_x, box_y, box_columns, box_rows, tick++ / 10);
+        }
+
+        for (i = 0; i < line_count; i++) {
+            int width = (int)strlen(lines[i]) * 8;
+
+            draw_text_line(lines[i], box_x + TILE_SIZE + ((interior_width - width) / 2),
+                text_top + (i * line_height), 0);
+        }
     }
 
     if (keys->enter || keys->space || keys->jump || keys->fire || keys->jetpack ||
@@ -2082,6 +2185,11 @@ static void clear_gameloop(game_context_t *game) {
 static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_state, int state) {
     char level_path[4096];
     int next_state = state;
+
+    /* F10, the development shortcut to the ending, leaves from wherever the game is. */
+    if (key_state->congrats) {
+        return G_STATE_CONGRATS;
+    }
 
     if (state == G_STATE_NONE) {
         clear_map(map);
@@ -2300,11 +2408,11 @@ int game_main(int is_windowed, int starting_level) {
      * plain SDL_WINDOW_FULLSCREEN with no mode set is the old fullscreen desktop.
      */
     if (fullscreen) {
-        g_window = SDL_CreateWindow("",
+        g_window = SDL_CreateWindow(GAME_TITLE,
             DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
             SDL_WINDOW_FULLSCREEN | SDL_WINDOW_RESIZABLE);
     } else {
-        g_window = SDL_CreateWindow("",
+        g_window = SDL_CreateWindow(GAME_TITLE,
             DISPLAY_BASE_WIDTH * windowed_scale, DISPLAY_HEIGHT * windowed_scale,
             SDL_WINDOW_RESIZABLE);
     }
