@@ -30,8 +30,8 @@ uint32_t *g_pixels;
 int g_pixels_pitch = DISPLAY_BASE_WIDTH;
 assets_t *g_assets;
 /*
- * Both artwork sets are loaded up front, so the VIDEO MODE row only has to
- * point g_assets at the other one: nothing is read from disk mid-game.
+ * Every artwork set is loaded up front, so the VIDEO MODE row only has to
+ * point g_assets at another one: nothing is read from disk mid-game.
  */
 static assets_t *g_asset_sets[VIDEO_MODE_COUNT];
 soundfx_t *g_soundfx;
@@ -61,7 +61,11 @@ static const char *g_scale_labels[DISPLAY_SCALE_COUNT] = {
 
 /* Pause menu VIDEO MODE row: matches config.h's VIDEO_MODE_* order. */
 static const char *g_video_mode_labels[VIDEO_MODE_COUNT] = {
-    "VGA", "EGA"
+    "VGA", "EGA", "CGA"
+};
+/* Where each VIDEO MODE's artwork is, under res/. */
+static const char *g_video_mode_dirs[VIDEO_MODE_COUNT] = {
+    "tiles", "ega-tiles", "cga-tiles"
 };
 
 /* Pause menu FILTERS row: matches filter.h's FILTER_OFF..FILTER_BOTH order. */
@@ -818,9 +822,9 @@ static void key_out_black_background(SDL_Surface *surface) {
 }
 
 /*
- * Loads one artwork set. The EGA set in res/ega-tiles carries only what the
- * original drew in EGA, numbered and sized like its VGA twin (see
- * scripts/extract-ega.py); every tile it does not have, the font and the
+ * Loads one artwork set. The EGA and CGA sets carry only what the original drew
+ * in those modes, numbered and sized like their VGA twins (see
+ * scripts/extract-tiles.py); every tile they do not have, the font and the
  * popup box among them, comes from res/tiles. Returns how many tiles loaded.
  */
 static int load_asset_set(assets_t *assets, const char *dir) {
@@ -857,12 +861,16 @@ static int load_asset_set(assets_t *assets, const char *dir) {
 }
 
 static int load_assets(void) {
-    int loaded;
+    int loaded = 0;
 
-    g_asset_sets[VIDEO_MODE_VGA] = calloc(1, sizeof(struct game_assets));
-    g_asset_sets[VIDEO_MODE_EGA] = calloc(1, sizeof(struct game_assets));
-    loaded = load_asset_set(g_asset_sets[VIDEO_MODE_VGA], "tiles");
-    load_asset_set(g_asset_sets[VIDEO_MODE_EGA], "ega-tiles");
+    for (int mode = 0; mode < VIDEO_MODE_COUNT; mode++) {
+        g_asset_sets[mode] = calloc(1, sizeof(struct game_assets));
+        if (mode == VIDEO_MODE_VGA) {
+            loaded = load_asset_set(g_asset_sets[mode], g_video_mode_dirs[mode]);
+        } else {
+            load_asset_set(g_asset_sets[mode], g_video_mode_dirs[mode]);
+        }
+    }
     g_assets = g_asset_sets[g_config.video_mode];
 
     for (size_t i = 0; i < sizeof(blended_sprites) / sizeof(blended_sprites[0]); i++) {

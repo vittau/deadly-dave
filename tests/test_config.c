@@ -100,8 +100,8 @@ static void check_range_guard(void) {
         config.scaling, DISPLAY_SCALE_FIT);
 
     config.video_mode = VIDEO_MODE_EGA;
-    config_parse(&config, "video_mode=2\nvideo_mode=-1\n");
-    expect_int("video_mode outside its two sets keeps what it had",
+    config_parse(&config, "video_mode=3\nvideo_mode=-1\n");
+    expect_int("video_mode outside its three sets keeps what it had",
         config.video_mode, VIDEO_MODE_EGA);
 }
 
