@@ -23,11 +23,12 @@ feel, with no emulator and nothing to install.
   controls work as a gamepad.
 - **Keyboard and controller**, both at once, and a pad can be plugged in while
   playing.
+- **VGA or EGA:** the original's EGA artwork is there too, one menu row away.
 - **CRT filters:** scanlines, the Blargg NTSC composite filter, or both.
 - **Assists:** no enemies, infinite lives or god mode, for a half, a third or a
   quarter of the points.
 - **Pause menu** (`Escape` / `Start`) with V-sync, FPS limit, window mode,
-  scaling, filters, assists and a level warp. Settings are remembered between
+  scaling, video mode, filters, assists and a level warp. Settings are remembered between
   runs, except assists and the warp.
 
 ![Level 6](res/screenshots/screen3.png)

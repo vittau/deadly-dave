@@ -72,7 +72,7 @@ jumped to, both through `pause_menu_restart_run()` (score 0, `GAME_START_LIVES`)
 so a score is never carried across an assist change or a jump.
 
 `config.c` / `include/config.h` owns
-them: `config_t` carries V-SYNC, FPS LIMIT, FILTERS, MODE and SCALING, with the
+them: `config_t` carries V-SYNC, FPS LIMIT, FILTERS, MODE, SCALING and VIDEO MODE, with the
 defaults in the `g_config` initializer in `game.c` (a first run, or a deleted
 file, gets vsync on, the frame paced to the display's refresh, no filter, full
 screen and pixel perfect scaling). `config_load()` runs right after `SDL_Init()`
@@ -191,6 +191,39 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
   the two tiles), and the character appended to the **end** of `font_chars[]`:
   the place in that string is the offset from tile 500, so inserting one in the
   middle would hand every glyph after it its neighbour's tile.
+
+## EGA artwork
+
+`res/ega-tiles` holds the original's EGA tiles, written by
+`scripts/extract-ega.py` from `original/EGADAVE.DAV`, and the VIDEO MODE row
+(VGA/EGA, kept in `config.ini`) picks between it and `res/tiles`. Both sets are
+loaded at startup (`g_asset_sets[]` in `game.c`) and the row only repoints
+`g_assets`; a tile `res/ega-tiles` does not have (the font, the popup box, the
+port's additions above 157) is loaded from `res/tiles` into the EGA set too.
+
+- Every EGA tile is saved under the number of its VGA twin with the VGA file's
+  BMP header, so the size, the bit depth and the alpha match and nothing in the
+  game has to know which set it draws. Regenerate the folder with the script,
+  do not hand-edit it.
+- The `.DAV` is a u32 count, u32 offsets, then the tiles: 0-52 are 16x16 with
+  no header, the rest start with u16 width-1 and height-1. Pixels are 16 colour
+  EGA, each row holding its four planes in turn (intensity, red, green, blue),
+  each padded to a byte.
+- It has 401 tiles against VGA's 158 because the sprites come four times,
+  pre-shifted by 0/2/4/6 pixels; only the unshifted copy is used (VGA 53-132 is
+  EGA `53 + 4*(n-53)`, and the jetpack bar unit, 142, is shifted too). A few
+  sprites end in a solid single colour row, the edge of the sheet they were
+  grabbed from, which the script drops; it never does that to a level tile,
+  where a plain last row is real drawing (two of the water frames).
+- The EGA sprites are sized a little differently, so each animation is placed
+  with one shared offset where it best covers its VGA twin and cut or padded to
+  the VGA size; the script prints every tile it moved. The 16x16 level tiles
+  stay put, except the pickups drawn on black (`PICKUPS` in the script: the
+  jetpack, the trophy, the gun, the gems, the crown, the ring, the scepter),
+  which move inside their cell the same way. Only the jetpack frame
+  (141) ends up a row taller than its VGA twin, since cutting would lose its
+  border. Dave's alpha comes from the EGA mask tiles, the same way the VGA
+  alpha matches the VGA masks.
 
 ## Gotchas
 

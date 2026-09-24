@@ -27,6 +27,7 @@ static config_t defaults(void) {
     config.filter = FILTER_OFF;
     config.fullscreen = 1;
     config.scaling = DISPLAY_SCALE_PIXEL_PERFECT;
+    config.video_mode = VIDEO_MODE_VGA;
     return config;
 }
 
@@ -39,13 +40,15 @@ static void check_file(void) {
         "fps_limit=1\n"
         "filter=3\n"
         "fullscreen=0\n"
-        "scaling=1\n");
+        "scaling=1\n"
+        "video_mode=1\n");
 
     expect_int("vsync", config.vsync, 0);
     expect_int("fps_limit", config.fps_limit, 1);
     expect_int("filter", config.filter, FILTER_BOTH);
     expect_int("fullscreen", config.fullscreen, 0);
     expect_int("scaling", config.scaling, DISPLAY_SCALE_FIT);
+    expect_int("video_mode", config.video_mode, VIDEO_MODE_EGA);
 }
 
 /*
@@ -75,8 +78,8 @@ static void check_tolerated_lines(void) {
 }
 
 /*
- * The FPS limit is an index into a table of labels, the filter mode and the
- * scaling mode index arrays of names, so any of them from outside its range
+ * The FPS limit is an index into a table of labels, the filter, scaling and
+ * video modes index arrays of names, so any of them from outside its range
  * would read past the end of one. None is allowed through, and the row keeps
  * what it had.
  */
@@ -95,6 +98,11 @@ static void check_range_guard(void) {
     config_parse(&config, "scaling=7\nscaling=5\nscaling=-1\n");
     expect_int("scaling outside its five modes keeps what it had",
         config.scaling, DISPLAY_SCALE_FIT);
+
+    config.video_mode = VIDEO_MODE_EGA;
+    config_parse(&config, "video_mode=2\nvideo_mode=-1\n");
+    expect_int("video_mode outside its two sets keeps what it had",
+        config.video_mode, VIDEO_MODE_EGA);
 }
 
 static void check_round_trip(void) {
@@ -108,6 +116,7 @@ static void check_round_trip(void) {
     config.filter = FILTER_NTSC;
     config.fullscreen = 0;
     config.scaling = DISPLAY_SCALE_FIT;
+    config.video_mode = VIDEO_MODE_EGA;
 
     length = config_format(text, (int)sizeof(text), &config);
     if (length <= 0) {
@@ -123,6 +132,7 @@ static void check_round_trip(void) {
     expect_int("round trip filter", reread.filter, FILTER_NTSC);
     expect_int("round trip fullscreen", reread.fullscreen, 0);
     expect_int("round trip scaling", reread.scaling, DISPLAY_SCALE_FIT);
+    expect_int("round trip video_mode", reread.video_mode, VIDEO_MODE_EGA);
 
     /* Last, since it truncates the text: a buffer too small is refused whole. */
     expect_int("a buffer that cannot hold it reports -1",

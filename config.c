@@ -111,6 +111,9 @@ void config_parse(config_t *config, const char *text) {
                     } else if (strcmp(line, "filter") == 0 &&
                             number >= FILTER_OFF && number < FILTER_MODE_COUNT) {
                         config->filter = (int)number;
+                    } else if (strcmp(line, "video_mode") == 0 &&
+                            number >= 0 && number < VIDEO_MODE_COUNT) {
+                        config->video_mode = (int)number;
                     }
                 }
             }
@@ -135,9 +138,10 @@ int config_format(char *out, int out_size, const config_t *config) {
         "fps_limit=%d\n"
         "filter=%d\n"
         "fullscreen=%d\n"
-        "scaling=%d\n",
+        "scaling=%d\n"
+        "video_mode=%d\n",
         config->vsync ? 1 : 0, config->fps_limit, config->filter,
-        config->fullscreen ? 1 : 0, config->scaling);
+        config->fullscreen ? 1 : 0, config->scaling, config->video_mode);
 
     if (length < 0 || length >= out_size) {
         return -1;

@@ -22,12 +22,21 @@
 #define FPS_LIMIT_UNLIMITED_INDEX 4
 #define FPS_LIMIT_COUNT           5
 
+/*
+ * VIDEO MODE: which artwork is drawn, the VGA tiles in res/tiles or the EGA
+ * ones in res/ega-tiles. The loading and the labels are in game.c.
+ */
+#define VIDEO_MODE_VGA   0
+#define VIDEO_MODE_EGA   1
+#define VIDEO_MODE_COUNT 2
+
 typedef struct config_struct {
     int vsync;          /* 1 on, 0 off, as the pause menu's V-SYNC row           */
     int fps_limit;      /* 0..FPS_LIMIT_COUNT-1, the pause menu's FPS LIMIT row  */
     int filter;         /* FILTER_OFF .. FILTER_BOTH (see filter.h)              */
     int fullscreen;     /* 1 full screen, 0 windowed, the pause menu's MODE      */
     int scaling;        /* DISPLAY_SCALE_PIXEL_PERFECT .. _3X (see display.h)    */
+    int video_mode;     /* VIDEO_MODE_VGA or VIDEO_MODE_EGA                      */
 } config_t;
 
 /*

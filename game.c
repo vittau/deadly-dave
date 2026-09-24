@@ -29,6 +29,11 @@ SDL_Renderer *g_renderer;
 uint32_t *g_pixels;
 int g_pixels_pitch = DISPLAY_BASE_WIDTH;
 assets_t *g_assets;
+/*
+ * Both artwork sets are loaded up front, so the VIDEO MODE row only has to
+ * point g_assets at the other one: nothing is read from disk mid-game.
+ */
+static assets_t *g_asset_sets[VIDEO_MODE_COUNT];
 soundfx_t *g_soundfx;
 SDL_Gamepad *g_gamepad;
 
@@ -43,7 +48,8 @@ static config_t g_config = {
     FPS_LIMIT_REFRESH_INDEX,  /* FPS LIMIT: one refresh of the screen the window is on */
     FILTER_OFF,               /* FILTERS: plain picture */
     1,                        /* MODE: full screen */
-    DISPLAY_SCALE_PIXEL_PERFECT /* SCALING: crisp, whole number pixels */
+    DISPLAY_SCALE_PIXEL_PERFECT, /* SCALING: crisp, whole number pixels */
+    VIDEO_MODE_VGA            /* VIDEO MODE: the VGA artwork */
 };
 static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
     "30", "60", "120", "REFRESH", "UNLIMITED"
@@ -51,6 +57,11 @@ static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
 /* Pause menu SCALING row: matches display.h's DISPLAY_SCALE_* order. */
 static const char *g_scale_labels[DISPLAY_SCALE_COUNT] = {
     "PIXEL PERFECT", "FIT", "1X", "2X", "3X"
+};
+
+/* Pause menu VIDEO MODE row: matches config.h's VIDEO_MODE_* order. */
+static const char *g_video_mode_labels[VIDEO_MODE_COUNT] = {
+    "VGA", "EGA"
 };
 
 /* Pause menu FILTERS row: matches filter.h's FILTER_OFF..FILTER_BOTH order. */
@@ -483,11 +494,12 @@ static void draw_score(int score) {
 #define PAUSE_OPTION_FPS     1
 #define PAUSE_OPTION_MODE    2
 #define PAUSE_OPTION_SCALING 3
-#define PAUSE_OPTION_FILTERS 4
-#define PAUSE_OPTION_ASSISTS 5
-#define PAUSE_OPTION_WARP    6
-#define PAUSE_OPTION_QUIT    7
-#define PAUSE_OPTION_COUNT   8
+#define PAUSE_OPTION_VIDEO   4
+#define PAUSE_OPTION_FILTERS 5
+#define PAUSE_OPTION_ASSISTS 6
+#define PAUSE_OPTION_WARP    7
+#define PAUSE_OPTION_QUIT    8
+#define PAUSE_OPTION_COUNT   9
 
 /* Levels on disk, res/levels/level1.ddt through level10.ddt; WARP cycles through them. */
 #define TOTAL_LEVELS 10
@@ -506,6 +518,9 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
         break;
     case PAUSE_OPTION_SCALING:
         snprintf(out, out_size, "SCALING: %s", g_scale_labels[display_scale_mode()]);
+        break;
+    case PAUSE_OPTION_VIDEO:
+        snprintf(out, out_size, "VIDEO MODE: %s", g_video_mode_labels[g_config.video_mode]);
         break;
     case PAUSE_OPTION_FILTERS:
         snprintf(out, out_size, "FILTERS: %s", g_filter_labels[filter_mode()]);
@@ -564,6 +579,11 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
         /* Saves by itself, since F5 toggles it as well. */
         toggle_scale_mode();
         break;
+    case PAUSE_OPTION_VIDEO:
+        g_config.video_mode = (g_config.video_mode + 1) % VIDEO_MODE_COUNT;
+        g_assets = g_asset_sets[g_config.video_mode];
+        config_save(&g_config);
+        break;
     case PAUSE_OPTION_FILTERS:
         g_config.filter = (g_config.filter + 1) % FILTER_MODE_COUNT;
         filter_set_mode(g_config.filter);
@@ -597,13 +617,13 @@ static void draw_pause_menu(game_context_t *game) {
     int offset = display_center_offset();
     /*
      * 26 columns hold the longest row, "ASSISTS: INFINITE LIVES", with the 18
-     * pixel indent the rows are drawn at; 13 rows hold the title and the eight
-     * rows, which are 10 pixels apart and start 22 pixels down, so the last one
+     * pixel indent the rows are drawn at; 14 rows hold the title and the nine
+     * rows, which are 10 pixels apart and start 20 pixels down, so the last one
      * clears the bottom edge by as much as it did when there were seven.
      */
     const int columns = 26;
-    const int rows = 13;
-    const int first_row = 22;
+    const int rows = 14;
+    const int first_row = 20;
     int box_x = offset + ((DISPLAY_BASE_WIDTH - (columns * 8)) / 2);
     int box_y = DISPLAY_SCENE_TOP + (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (rows * 8)) / 2);
     char line[32];
@@ -797,19 +817,28 @@ static void key_out_black_background(SDL_Surface *surface) {
     free(stack);
 }
 
-static int load_assets(void) {
+/*
+ * Loads one artwork set. The EGA set in res/ega-tiles carries only what the
+ * original drew in EGA, numbered and sized like its VGA twin (see
+ * scripts/extract-ega.py); every tile it does not have, the font and the
+ * popup box among them, comes from res/tiles. Returns how many tiles loaded.
+ */
+static int load_asset_set(assets_t *assets, const char *dir) {
     char fname[64];
     int loaded = 0;
-    g_assets = calloc(1, sizeof(struct game_assets));
 
     for (int i = 0; i < 1000; i++) {
         SDL_Surface *surface;
 
-        snprintf(fname, sizeof(fname), "res/tiles/tile%u.bmp", i);
+        snprintf(fname, sizeof(fname), "res/%s/tile%u.bmp", dir, i);
         /* A missing file loads as NULL, so no separate existence check is needed. */
         surface = SDL_LoadBMP(fname);
+        if (surface == NULL && strcmp(dir, "tiles") != 0) {
+            snprintf(fname, sizeof(fname), "res/tiles/tile%u.bmp", i);
+            surface = SDL_LoadBMP(fname);
+        }
         if (surface != NULL) {
-            g_assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
+            assets->imgdata[i] = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA8888);
             /*
              * Monsters, plasma and the bullet ship as 24 bit BMPs with no
              * alpha channel, so their black background would be drawn
@@ -818,25 +847,40 @@ static int load_assets(void) {
              */
             if (!SDL_ISPIXELFORMAT_ALPHA(surface->format) &&
                     i >= SPRITE_IDX_MONSTER_SPIDER1 && i <= SPRITE_IDX_BULLET_LEFT) {
-                key_out_black_background(g_assets->imgdata[i]);
+                key_out_black_background(assets->imgdata[i]);
             }
             SDL_DestroySurface(surface);
             loaded++;
         }
+    }
+    return loaded;
+}
+
+static int load_assets(void) {
+    int loaded;
+
+    g_asset_sets[VIDEO_MODE_VGA] = calloc(1, sizeof(struct game_assets));
+    g_asset_sets[VIDEO_MODE_EGA] = calloc(1, sizeof(struct game_assets));
+    loaded = load_asset_set(g_asset_sets[VIDEO_MODE_VGA], "tiles");
+    load_asset_set(g_asset_sets[VIDEO_MODE_EGA], "ega-tiles");
+    g_assets = g_asset_sets[g_config.video_mode];
+
+    for (size_t i = 0; i < sizeof(blended_sprites) / sizeof(blended_sprites[0]); i++) {
+        g_blended[blended_sprites[i]] = 1;
     }
 
     /*
      * Nothing loaded means the artwork is not next to the binary. Fail with a
      * message instead of drawing with no tiles at all.
      */
-    for (size_t i = 0; i < sizeof(blended_sprites) / sizeof(blended_sprites[0]); i++) {
-        g_blended[blended_sprites[i]] = 1;
-    }
-
     if (loaded == 0) {
         printf("Could not find the game assets in 'res/tiles'. \n");
         printf("The 'res' directory has to sit next to the executable. \n");
-        free(g_assets);
+        for (int mode = 0; mode < VIDEO_MODE_COUNT; mode++) {
+            unload_assets(g_asset_sets[mode]);
+            free(g_asset_sets[mode]);
+            g_asset_sets[mode] = NULL;
+        }
         g_assets = NULL;
         return -1;
     }
@@ -2429,10 +2473,14 @@ static int game_shutdown(void) {
         soundfx_destroy(g_soundfx);
         g_soundfx = NULL;
     }
-    if (g_assets != NULL) {
-        unload_assets(g_assets);
-        g_assets = NULL;
+    for (int mode = 0; mode < VIDEO_MODE_COUNT; mode++) {
+        if (g_asset_sets[mode] != NULL) {
+            unload_assets(g_asset_sets[mode]);
+            free(g_asset_sets[mode]);
+            g_asset_sets[mode] = NULL;
+        }
     }
+    g_assets = NULL;
     if (g_gamepad != NULL) {
         SDL_CloseGamepad(g_gamepad);
         g_gamepad = NULL;
@@ -2551,8 +2599,8 @@ int game_main(int is_windowed, int starting_level) {
     }
 
     /* Window and taskbar icon, the same sprite the packages use as app icon. */
-    if (g_assets->imgdata[SPRITE_IDX_ICON] != NULL) {
-        SDL_SetWindowIcon(g_window, g_assets->imgdata[SPRITE_IDX_ICON]);
+    if (g_asset_sets[VIDEO_MODE_VGA]->imgdata[SPRITE_IDX_ICON] != NULL) {
+        SDL_SetWindowIcon(g_window, g_asset_sets[VIDEO_MODE_VGA]->imgdata[SPRITE_IDX_ICON]);
     }
 
     g_soundfx = soundfx_create();
