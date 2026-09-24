@@ -49,8 +49,8 @@ static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
     "30", "60", "120", "REFRESH", "UNLIMITED"
 };
 /* Pause menu SCALING row: matches display.h's DISPLAY_SCALE_* order. */
-static const char *g_scale_labels[DISPLAY_SCALE_FIT + 1] = {
-    "PIXEL PERFECT", "FIT"
+static const char *g_scale_labels[DISPLAY_SCALE_COUNT] = {
+    "PIXEL PERFECT", "FIT", "1X", "2X", "3X"
 };
 
 /* Pause menu FILTERS row: matches filter.h's FILTER_OFF..FILTER_BOTH order. */
@@ -855,8 +855,7 @@ static void toggle_fullscreen(void) {
  * next display_sync().
  */
 static void toggle_scale_mode(void) {
-    g_config.scaling = (g_config.scaling == DISPLAY_SCALE_PIXEL_PERFECT) ?
-        DISPLAY_SCALE_FIT : DISPLAY_SCALE_PIXEL_PERFECT;
+    g_config.scaling = (g_config.scaling + 1) % DISPLAY_SCALE_COUNT;
     display_set_scale_mode(g_config.scaling);
     config_save(&g_config);
 }

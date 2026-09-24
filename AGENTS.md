@@ -205,6 +205,14 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
   banner on them, end up off the screen. `tests/test_display.c` checks both the
   "never past the bottom edge" and the "scene centered while there is room"
   invariants.
+- SCALING has five modes (`DISPLAY_SCALE_*`, `DISPLAY_SCALE_COUNT`): PIXEL
+  PERFECT, FIT, 1X, 2X and 3X. The fixed ones are the pixel perfect path with
+  the factor capped at `mode - DISPLAY_SCALE_1X + 1`, so the window width
+  becomes framebuffer up to `DISPLAY_MAX_WIDTH` and the picture stays 200/400/600
+  pixels tall with black around it; a window too small for the factor gets the
+  largest one that fits, and one under 320x200 falls back to FIT. Keep the fixed
+  modes contiguous and in order. `F5` and the pause menu cycle all five, and
+  `config_parse()` guards the range with `DISPLAY_SCALE_COUNT`.
 - The game draws into an offscreen `RGBA8888` buffer that `display_lock()`
   hands out, not straight into the texture. `display_present()` locks the
   texture itself and runs `filter_render()` while copying, which is what lets

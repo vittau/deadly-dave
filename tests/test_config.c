@@ -92,8 +92,8 @@ static void check_range_guard(void) {
     expect_int("filter outside the enum keeps what it had", config.filter, FILTER_BOTH);
 
     config.scaling = DISPLAY_SCALE_FIT;
-    config_parse(&config, "scaling=7\nscaling=-1\n");
-    expect_int("scaling outside its two modes keeps what it had",
+    config_parse(&config, "scaling=7\nscaling=5\nscaling=-1\n");
+    expect_int("scaling outside its five modes keeps what it had",
         config.scaling, DISPLAY_SCALE_FIT);
 }
 

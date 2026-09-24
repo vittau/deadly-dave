@@ -46,6 +46,17 @@
 #define DISPLAY_SCALE_PIXEL_PERFECT 0
 /* Fractional scale factor, fills the screen, pixels may be unevenly sized. */
 #define DISPLAY_SCALE_FIT           1
+/*
+ * A fixed factor, whatever the window size: one, two or three screen pixels per
+ * game pixel, the picture stays 200, 400 or 600 pixels tall with black around
+ * it, and a wide window shows up to the whole 100 column level at once. A
+ * window too small for the factor gets the largest one that fits, and FIT
+ * below 320x200. The factor is the mode's distance from 1X, plus one.
+ */
+#define DISPLAY_SCALE_1X            2
+#define DISPLAY_SCALE_2X            3
+#define DISPLAY_SCALE_3X            4
+#define DISPLAY_SCALE_COUNT         5
 
 typedef struct display_geometry_struct {
     int width;      /* framebuffer width, in game pixels                    */

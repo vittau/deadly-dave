@@ -24,8 +24,10 @@ emulator and without anything to install.
   than a flattened one. A level narrower than the viewport is centred, with
   black on the sides, and everything is scaled by whole numbers so the pixels
   stay square and sharp. `F5` (or the pause menu's `SCALING` row) switches to a
-  mode that fills the whole screen, and the window can be resized to whatever
-  you like. The screenshot above is level 2 in full, on a screen wide enough to
+  mode that fills the whole screen, or to `1X`, `2X` and `3X`, which keep every
+  game pixel one, two or three screen pixels whatever the window size: an ultrawide screen
+  shows a very wide slice of the level, with black around the picture. The window can be resized
+  to whatever you like. The screenshot above is level 2 in full, on a screen wide enough to
   hold it.
 - **Keyboard or controller, together.** The keyboard keeps the feel of the
   original; a controller works out of the box and can be plugged in while
@@ -33,7 +35,7 @@ emulator and without anything to install.
 - **A pause menu with the settings that matter.** `Escape` (or `Start`) opens it
   while playing or in a warp corridor: `V-SYNC` on/off, an `FPS LIMIT` of
   30/60/120/refresh/unlimited, the `MODE` (full screen or windowed), the
-  `SCALING` (pixel perfect or stretched to fit), the `FILTERS` row and a `WARP`
+  `SCALING` (pixel perfect, stretched to fit, 1x, 2x or 3x), the `FILTERS` row and a `WARP`
   row that jumps straight to any level. `Up`/`Down`
   moves, `Enter`/`Space` applies, `Escape` closes. Everything but `WARP` is kept
   between runs, in a `config.ini` in the system's per-user application folder

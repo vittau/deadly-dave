@@ -103,7 +103,7 @@ void config_parse(config_t *config, const char *text) {
                         config->fullscreen = (number != 0);
                     } else if (strcmp(line, "scaling") == 0 &&
                             number >= DISPLAY_SCALE_PIXEL_PERFECT &&
-                            number <= DISPLAY_SCALE_FIT) {
+                            number < DISPLAY_SCALE_COUNT) {
                         config->scaling = (int)number;
                     } else if (strcmp(line, "fps_limit") == 0 &&
                             number >= 0 && number < FPS_LIMIT_COUNT) {

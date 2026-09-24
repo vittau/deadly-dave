@@ -27,7 +27,7 @@ typedef struct config_struct {
     int fps_limit;      /* 0..FPS_LIMIT_COUNT-1, the pause menu's FPS LIMIT row  */
     int filter;         /* FILTER_OFF .. FILTER_BOTH (see filter.h)              */
     int fullscreen;     /* 1 full screen, 0 windowed, the pause menu's MODE      */
-    int scaling;        /* DISPLAY_SCALE_PIXEL_PERFECT or _FIT (see display.h)   */
+    int scaling;        /* DISPLAY_SCALE_PIXEL_PERFECT .. _3X (see display.h)    */
 } config_t;
 
 /*

@@ -56,6 +56,16 @@ static void check_invariants(int out_w, int out_h, int mode) {
     }
     check(drift < 0.02, "pixels are not square, the picture is stretched", out_w, out_h, mode);
 
+    if (mode == DISPLAY_SCALE_1X && out_w >= DISPLAY_BASE_WIDTH && out_h >= DISPLAY_HEIGHT) {
+        check(g.scale == 1 && g.dst.w == g.width && g.dst.h == g.height,
+            "1x did not keep one screen pixel per game pixel", out_w, out_h, mode);
+    }
+    if ((mode == DISPLAY_SCALE_2X || mode == DISPLAY_SCALE_3X) &&
+            out_w >= DISPLAY_BASE_WIDTH && out_h >= DISPLAY_HEIGHT) {
+        check(g.scale >= 1 && g.scale <= mode - DISPLAY_SCALE_1X + 1 &&
+            g.dst.w == g.width * g.scale && g.dst.h == g.height * g.scale,
+            "fixed scale went past its factor", out_w, out_h, mode);
+    }
     if (mode == DISPLAY_SCALE_PIXEL_PERFECT && out_h >= DISPLAY_HEIGHT) {
         check(g.scale >= 1, "no integer scale factor was chosen", out_w, out_h, mode);
         check(g.dst.w == g.width * g.scale && g.dst.h == g.height * g.scale,
@@ -102,6 +112,9 @@ int main(void) {
     for (i = 0; i < count; i++) {
         check_invariants(resolutions[i][0], resolutions[i][1], DISPLAY_SCALE_PIXEL_PERFECT);
         check_invariants(resolutions[i][0], resolutions[i][1], DISPLAY_SCALE_FIT);
+        check_invariants(resolutions[i][0], resolutions[i][1], DISPLAY_SCALE_1X);
+        check_invariants(resolutions[i][0], resolutions[i][1], DISPLAY_SCALE_2X);
+        check_invariants(resolutions[i][0], resolutions[i][1], DISPLAY_SCALE_3X);
     }
 
     /* 16:10 is the native shape of the game: the picture must fill the screen. */
@@ -120,6 +133,30 @@ int main(void) {
     /* Ultra wide screens keep widening the framebuffer, they do not stop. */
     check_exact(3440, 1440, DISPLAY_SCALE_PIXEL_PERFECT, 488, 3416, 1400);
     check_exact(5120, 1440, DISPLAY_SCALE_PIXEL_PERFECT, 728, 5096, 1400);
+
+    /*
+     * 1x never scales: the window width becomes level up to the 100 columns
+     * there are, and the picture stays 200 pixels tall with black around it.
+     */
+    check_exact(1280, 800, DISPLAY_SCALE_1X, 1280, 1280, 200);
+    check_exact(960, 600, DISPLAY_SCALE_1X, 960, 960, 200);
+    check_exact(1000, 600, DISPLAY_SCALE_1X, 1000, 1000, 200);
+    check_exact(3440, 1440, DISPLAY_SCALE_1X, 1600, 1600, 200);
+    check_exact(320, 200, DISPLAY_SCALE_1X, 320, 320, 200);
+
+    /* 2x is the same at a factor of two, and drops to 1x where 2x does not fit. */
+    check_exact(1920, 1080, DISPLAY_SCALE_2X, 960, 1920, 400);
+    check_exact(3440, 1440, DISPLAY_SCALE_2X, 1600, 3200, 400);
+    check_exact(960, 600, DISPLAY_SCALE_2X, 480, 960, 400);
+    check_exact(640, 400, DISPLAY_SCALE_2X, 320, 640, 400);
+    check_exact(600, 380, DISPLAY_SCALE_2X, 600, 600, 200);
+
+    /* 3x likewise, dropping to 2x where 3x does not fit. */
+    check_exact(1920, 1080, DISPLAY_SCALE_3X, 640, 1920, 600);
+    check_exact(3440, 1440, DISPLAY_SCALE_3X, 1144, 3432, 600);
+    check_exact(1280, 800, DISPLAY_SCALE_3X, 424, 1272, 600);
+    check_exact(960, 600, DISPLAY_SCALE_3X, 320, 960, 600);
+    check_exact(900, 560, DISPLAY_SCALE_3X, 448, 896, 400);
 
     /* A window with no size at all must not produce a broken framebuffer. */
     degenerate = display_compute_geometry(0, 0, DISPLAY_SCALE_PIXEL_PERFECT);

@@ -46,6 +46,7 @@ static int clamp_width(int width) {
 display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode) {
     display_geometry_t geometry;
     int scale;
+    int fixed;
     int shift;
 
     if (out_w < 1 || out_h < 1) {
@@ -64,11 +65,21 @@ display_geometry_t display_compute_geometry(int out_w, int out_h, int scale_mode
         scale = out_w / DISPLAY_BASE_WIDTH;
     }
 
-    if (scale_mode == DISPLAY_SCALE_PIXEL_PERFECT && scale >= 1) {
+    fixed = 0;
+    if (scale_mode >= DISPLAY_SCALE_1X && scale_mode <= DISPLAY_SCALE_3X) {
+        fixed = scale_mode - DISPLAY_SCALE_1X + 1;
+    }
+    if (fixed > 0 && scale > fixed) {
+        scale = fixed;
+    }
+
+    if ((scale_mode == DISPLAY_SCALE_PIXEL_PERFECT || fixed > 0) && scale >= 1) {
         /*
          * The scale factor comes from the height, the leftover width is given
          * back to the game as extra framebuffer columns. On a 16:10 screen this
-         * lands on 320 and the picture fills the display (1280x800 -> 4x).
+         * lands on 320 and the picture fills the display (1280x800 -> 4x). 1X
+         * to 3X take the same path with the factor capped, so the whole window
+         * width turns into level, up to DISPLAY_MAX_WIDTH, and the rest is black.
          */
         geometry.width = clamp_width(out_w / scale);
         geometry.scale = scale;
@@ -259,8 +270,8 @@ void display_sync(void) {
  * pull it from under the frame that is currently being drawn.
  */
 void display_set_scale_mode(int mode) {
-    g_scale_mode = (mode == DISPLAY_SCALE_FIT) ?
-        DISPLAY_SCALE_FIT : DISPLAY_SCALE_PIXEL_PERFECT;
+    g_scale_mode = (mode >= 0 && mode < DISPLAY_SCALE_COUNT) ?
+        mode : DISPLAY_SCALE_PIXEL_PERFECT;
 }
 
 int display_scale_mode(void) {
