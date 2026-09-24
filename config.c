@@ -32,7 +32,7 @@
 #define CONFIG_HEADER \
     "# Deadly Dave settings. Delete this file to go back to the defaults.\n"
 
-/* The header and the four short lines fit in this with room to spare. */
+/* The header and the seven short lines fit in this with room to spare. */
 #define CONFIG_BUFFER 256
 
 /*
@@ -114,6 +114,9 @@ void config_parse(config_t *config, const char *text) {
                     } else if (strcmp(line, "video_mode") == 0 &&
                             number >= 0 && number < VIDEO_MODE_COUNT) {
                         config->video_mode = (int)number;
+                    } else if (strcmp(line, "scrolling") == 0 &&
+                            number >= 0 && number < SCROLLING_COUNT) {
+                        config->scrolling = (int)number;
                     }
                 }
             }
@@ -139,9 +142,11 @@ int config_format(char *out, int out_size, const config_t *config) {
         "filter=%d\n"
         "fullscreen=%d\n"
         "scaling=%d\n"
-        "video_mode=%d\n",
+        "video_mode=%d\n"
+        "scrolling=%d\n",
         config->vsync ? 1 : 0, config->fps_limit, config->filter,
-        config->fullscreen ? 1 : 0, config->scaling, config->video_mode);
+        config->fullscreen ? 1 : 0, config->scaling, config->video_mode,
+        config->scrolling);
 
     if (length < 0 || length >= out_size) {
         return -1;

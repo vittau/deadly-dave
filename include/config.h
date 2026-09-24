@@ -32,6 +32,15 @@
 #define VIDEO_MODE_CGA   2
 #define VIDEO_MODE_COUNT 3
 
+/*
+ * SCROLLING: ORIGINAL moves the view a screen's worth of tiles at a time, the
+ * game standing still while it slides, as the original does; SMOOTH keeps the
+ * view following Dave pixel by pixel. The camera is in game.c.
+ */
+#define SCROLLING_ORIGINAL 0
+#define SCROLLING_SMOOTH   1
+#define SCROLLING_COUNT    2
+
 typedef struct config_struct {
     int vsync;          /* 1 on, 0 off, as the pause menu's V-SYNC row           */
     int fps_limit;      /* 0..FPS_LIMIT_COUNT-1, the pause menu's FPS LIMIT row  */
@@ -39,6 +48,7 @@ typedef struct config_struct {
     int fullscreen;     /* 1 full screen, 0 windowed, the pause menu's MODE      */
     int scaling;        /* DISPLAY_SCALE_PIXEL_PERFECT .. _3X (see display.h)    */
     int video_mode;     /* VIDEO_MODE_VGA, _EGA or _CGA                          */
+    int scrolling;      /* SCROLLING_ORIGINAL or _SMOOTH                         */
 } config_t;
 
 /*

@@ -19,6 +19,8 @@ feel, with no emulator and nothing to install.
 - **Self-contained downloads** for Windows, macOS and Linux, with SDL3 built in.
 - **Any screen:** a wider screen shows more of the level instead of stretching
   it. Scaling is pixel perfect, fit to screen, or a fixed 1x/2x/3x.
+- **Smooth scrolling:** the view can follow Dave pixel by pixel, or slide a
+  screen at a time with the game paused, as the original does.
 - **Steam Deck ready:** 1280x800 is exactly 4x the original, and the built-in
   controls work as a gamepad.
 - **Keyboard and controller**, both at once, and a pad can be plugged in while
@@ -31,7 +33,7 @@ feel, with no emulator and nothing to install.
 - **Assists:** no enemies, infinite lives or god mode, for a half, a third or a
   quarter of the points.
 - **Pause menu** (`Escape` / `Start`) with V-sync, FPS limit, window mode,
-  scaling, video mode, filters, assists and a level warp. Settings are remembered between
+  scaling, video mode, filters, scrolling, assists and a level warp. Settings are remembered between
   runs, except assists and the warp.
 
 ![Level 6](res/screenshots/screen3.png)

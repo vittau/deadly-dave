@@ -71,6 +71,11 @@ typedef struct game_context_struct {
 
     int64_t scroll_offset;
     int64_t scroll_remaining;
+    /*
+     * SCROLLING SMOOTH: left edge of the view in level pixels, which follows
+     * Dave every step instead of scroll_offset's whole tiles.
+     */
+    int64_t view_px;
 
     uint64_t level;
     /* Number of tile columns the loaded level actually has. */

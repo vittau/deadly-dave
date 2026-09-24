@@ -49,7 +49,8 @@ static config_t g_config = {
     FILTER_OFF,               /* FILTERS: plain picture */
     1,                        /* MODE: full screen */
     DISPLAY_SCALE_PIXEL_PERFECT, /* SCALING: crisp, whole number pixels */
-    VIDEO_MODE_VGA            /* VIDEO MODE: the VGA artwork */
+    VIDEO_MODE_VGA,           /* VIDEO MODE: the VGA artwork */
+    SCROLLING_ORIGINAL        /* SCROLLING: a screen at a time, as the original */
 };
 static const char *g_fps_limit_labels[FPS_LIMIT_COUNT] = {
     "30", "60", "120", "REFRESH", "UNLIMITED"
@@ -62,6 +63,10 @@ static const char *g_scale_labels[DISPLAY_SCALE_COUNT] = {
 /* Pause menu VIDEO MODE row: matches config.h's VIDEO_MODE_* order. */
 static const char *g_video_mode_labels[VIDEO_MODE_COUNT] = {
     "VGA", "EGA", "CGA"
+};
+/* Pause menu SCROLLING row: matches config.h's SCROLLING_* order. */
+static const char *g_scrolling_labels[SCROLLING_COUNT] = {
+    "ORIGINAL", "SMOOTH"
 };
 /* Where each VIDEO MODE's artwork is, under res/. */
 static const char *g_video_mode_dirs[VIDEO_MODE_COUNT] = {
@@ -277,6 +282,19 @@ static int game_view_x(game_context_t *game) {
 
     if (level_width < screen_width) {
         return -((screen_width - level_width) / 2);
+    }
+    if (g_config.scrolling == SCROLLING_SMOOTH) {
+        int view_x = (int)game->view_px;
+
+        /*
+         * The CGA composite colours of a pattern depend on the column it lands
+         * on, so a one pixel scroll would flip every dither's colour with each
+         * step; moving the view two pixels at a time keeps them steady.
+         */
+        if (g_config.video_mode == VIDEO_MODE_CGA) {
+            view_x &= ~1;
+        }
+        return view_x;
     }
     return game->scroll_offset * TILE_SIZE;
 }
@@ -499,11 +517,12 @@ static void draw_score(int score) {
 #define PAUSE_OPTION_MODE    2
 #define PAUSE_OPTION_SCALING 3
 #define PAUSE_OPTION_VIDEO   4
-#define PAUSE_OPTION_FILTERS 5
-#define PAUSE_OPTION_ASSISTS 6
-#define PAUSE_OPTION_WARP    7
-#define PAUSE_OPTION_QUIT    8
-#define PAUSE_OPTION_COUNT   9
+#define PAUSE_OPTION_FILTERS   5
+#define PAUSE_OPTION_SCROLLING 6
+#define PAUSE_OPTION_ASSISTS   7
+#define PAUSE_OPTION_WARP      8
+#define PAUSE_OPTION_QUIT      9
+#define PAUSE_OPTION_COUNT     10
 
 /* Levels on disk, res/levels/level1.ddt through level10.ddt; WARP cycles through them. */
 #define TOTAL_LEVELS 10
@@ -528,6 +547,9 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
         break;
     case PAUSE_OPTION_FILTERS:
         snprintf(out, out_size, "FILTERS: %s", g_filter_labels[filter_mode()]);
+        break;
+    case PAUSE_OPTION_SCROLLING:
+        snprintf(out, out_size, "SCROLLING: %s", g_scrolling_labels[g_config.scrolling]);
         break;
     case PAUSE_OPTION_ASSISTS:
         snprintf(out, out_size, "ASSISTS: %s", g_assist_labels[g_assist]);
@@ -594,6 +616,22 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
         filter_set_mode(g_config.filter);
         config_save(&g_config);
         break;
+    case PAUSE_OPTION_SCROLLING:
+        /*
+         * Each mode starts from the view the other one left, so the scene
+         * behind the menu does not jump: SMOOTH then slides to Dave, and
+         * ORIGINAL rounds to the nearest column and slides a screen if Dave
+         * is past its edge.
+         */
+        g_config.scrolling = (g_config.scrolling + 1) % SCROLLING_COUNT;
+        if (g_config.scrolling == SCROLLING_SMOOTH) {
+            game->view_px = game->scroll_offset * TILE_SIZE;
+        } else {
+            game->scroll_offset = (game->view_px + (TILE_SIZE / 2)) / TILE_SIZE;
+        }
+        game->scroll_remaining = 0;
+        config_save(&g_config);
+        break;
     case PAUSE_OPTION_ASSISTS:
         /* Not saved on purpose: a new launch always starts without assists. */
         g_assist = (g_assist + 1) % ASSIST_COUNT;
@@ -622,13 +660,13 @@ static void draw_pause_menu(game_context_t *game) {
     int offset = display_center_offset();
     /*
      * 26 columns hold the longest row, "ASSISTS: INFINITE LIVES", with the 18
-     * pixel indent the rows are drawn at; 14 rows hold the title and the nine
-     * rows, which are 10 pixels apart and start 20 pixels down, so the last one
+     * pixel indent the rows are drawn at; 15 rows hold the title and the ten
+     * rows, which are 10 pixels apart and start 18 pixels down, so the last one
      * clears the bottom edge by as much as it did when there were seven.
      */
     const int columns = 26;
-    const int rows = 14;
-    const int first_row = 20;
+    const int rows = 15;
+    const int first_row = 18;
     int box_x = offset + ((DISPLAY_BASE_WIDTH - (columns * 8)) / 2);
     int box_y = DISPLAY_SCENE_TOP + (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (rows * 8)) / 2);
     char line[32];
@@ -1447,6 +1485,11 @@ static int game_popup_routine(game_context_t *game, tile_t *map, keys_state_t *k
  */
 static int game_adjust_scroll_to_dave(game_context_t *game) {
     int screen_width = display_width();
+
+    /* SMOOTH never stops the game to slide: game_follow_dave() moves the view every step. */
+    if (g_config.scrolling == SCROLLING_SMOOTH) {
+        return 0;
+    }
     /*
      * Last column the viewport may start at, so that it never scrolls past the
      * end of the level. The wider the screen the more columns are on it, and
@@ -1499,7 +1542,57 @@ static int game_adjust_scroll_to_dave(game_context_t *game) {
     }
 }
 
+/*
+ * SCROLLING SMOOTH: Dave may move this far either side of the middle of the
+ * screen before the view moves with him, so turning around or a small step
+ * back does not shake the picture.
+ */
+#define SMOOTH_DEAD_ZONE 16
+/*
+ * The most the view moves in one step while it catches up, after the row was
+ * switched in the pause menu: faster than Dave's 2 pixels, so he cannot outrun
+ * it, and slow enough to be seen sliding rather than jumping.
+ */
+#define SMOOTH_CATCH_UP 4
+
+/*
+ * Moves the SMOOTH view so Dave is back inside the dead zone around the middle
+ * of the screen, never past either end of the level. With snap it goes there
+ * at once (a level start or a respawn), otherwise at most SMOOTH_CATCH_UP.
+ */
+static void game_follow_dave(game_context_t *game, int snap) {
+    int screen_width = display_width();
+    int max_x = (int)game->level_columns * TILE_SIZE - screen_width;
+    int centre = game->dave->tile->x + (TILE_SIZE / 2);
+    int view_x = (int)game->view_px;
+    int wanted = view_x;
+
+    if (centre - view_x < (screen_width / 2) - SMOOTH_DEAD_ZONE) {
+        wanted = centre - ((screen_width / 2) - SMOOTH_DEAD_ZONE);
+    } else if (centre - view_x > (screen_width / 2) + SMOOTH_DEAD_ZONE) {
+        wanted = centre - ((screen_width / 2) + SMOOTH_DEAD_ZONE);
+    }
+    if (wanted > max_x) {
+        wanted = max_x;
+    }
+    if (wanted < 0) {
+        wanted = 0;
+    }
+    if (!snap) {
+        if (wanted > view_x + SMOOTH_CATCH_UP) {
+            wanted = view_x + SMOOTH_CATCH_UP;
+        } else if (wanted < view_x - SMOOTH_CATCH_UP) {
+            wanted = view_x - SMOOTH_CATCH_UP;
+        }
+    }
+    game->view_px = wanted;
+}
+
 static void game_set_scroll_to_dave(game_context_t *game) {
+    if (g_config.scrolling == SCROLLING_SMOOTH) {
+        game_follow_dave(game, 1);
+        return;
+    }
     while (game_adjust_scroll_to_dave(game) != 0) {};
 }
 
@@ -1728,6 +1821,10 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     // Tick dave, monsters, and all block tiles in map
     game->dave->solid_hazards = (g_assist == ASSIST_GOD_MODE);
     game->dave->tick(game->dave, map, keys->left, keys->right, keys->jump, keys->climb_up, keys->down, keys->jetpack);
+    /* After Dave moved and before anything is drawn, so he never lags the view by a step. */
+    if (g_config.scrolling == SCROLLING_SMOOTH) {
+        game_follow_dave(game, 0);
+    }
 
     /* NO ENEMIES freezes the monsters and their plasma where they are, unseen. */
     if (g_assist != ASSIST_NO_ENEMIES) {
@@ -2353,6 +2450,7 @@ static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_
         clear_monsters(game);
 
         game->scroll_offset = 0;
+        game->view_px = 0;
 
         if (game->in_warp == WARP_RIGHT) {
             rc = game_level_load(game, map, "res/levels/warp_right.ddt");

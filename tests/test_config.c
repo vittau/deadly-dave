@@ -28,6 +28,7 @@ static config_t defaults(void) {
     config.fullscreen = 1;
     config.scaling = DISPLAY_SCALE_PIXEL_PERFECT;
     config.video_mode = VIDEO_MODE_VGA;
+    config.scrolling = SCROLLING_ORIGINAL;
     return config;
 }
 
@@ -41,7 +42,8 @@ static void check_file(void) {
         "filter=3\n"
         "fullscreen=0\n"
         "scaling=1\n"
-        "video_mode=1\n");
+        "video_mode=1\n"
+        "scrolling=1\n");
 
     expect_int("vsync", config.vsync, 0);
     expect_int("fps_limit", config.fps_limit, 1);
@@ -49,6 +51,7 @@ static void check_file(void) {
     expect_int("fullscreen", config.fullscreen, 0);
     expect_int("scaling", config.scaling, DISPLAY_SCALE_FIT);
     expect_int("video_mode", config.video_mode, VIDEO_MODE_EGA);
+    expect_int("scrolling", config.scrolling, SCROLLING_SMOOTH);
 }
 
 /*
@@ -103,6 +106,11 @@ static void check_range_guard(void) {
     config_parse(&config, "video_mode=3\nvideo_mode=-1\n");
     expect_int("video_mode outside its three sets keeps what it had",
         config.video_mode, VIDEO_MODE_EGA);
+
+    config.scrolling = SCROLLING_SMOOTH;
+    config_parse(&config, "scrolling=2\nscrolling=-1\n");
+    expect_int("scrolling outside its two modes keeps what it had",
+        config.scrolling, SCROLLING_SMOOTH);
 }
 
 static void check_round_trip(void) {
@@ -117,6 +125,7 @@ static void check_round_trip(void) {
     config.fullscreen = 0;
     config.scaling = DISPLAY_SCALE_FIT;
     config.video_mode = VIDEO_MODE_EGA;
+    config.scrolling = SCROLLING_SMOOTH;
 
     length = config_format(text, (int)sizeof(text), &config);
     if (length <= 0) {
@@ -133,6 +142,7 @@ static void check_round_trip(void) {
     expect_int("round trip fullscreen", reread.fullscreen, 0);
     expect_int("round trip scaling", reread.scaling, DISPLAY_SCALE_FIT);
     expect_int("round trip video_mode", reread.video_mode, VIDEO_MODE_EGA);
+    expect_int("round trip scrolling", reread.scrolling, SCROLLING_SMOOTH);
 
     /* Last, since it truncates the text: a buffer too small is refused whole. */
     expect_int("a buffer that cannot hold it reports -1",

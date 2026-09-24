@@ -76,10 +76,10 @@ jumped to, both through `pause_menu_restart_run()` (score 0, `GAME_START_LIVES`)
 so a score is never carried across an assist change or a jump.
 
 `config.c` / `include/config.h` owns
-them: `config_t` carries V-SYNC, FPS LIMIT, FILTERS, MODE, SCALING and VIDEO MODE, with the
+them: `config_t` carries V-SYNC, FPS LIMIT, FILTERS, MODE, SCALING, VIDEO MODE and SCROLLING, with the
 defaults in the `g_config` initializer in `game.c` (a first run, or a deleted
 file, gets vsync on, the frame paced to the display's refresh, no filter, full
-screen and pixel perfect scaling). `config_load()` runs right after `SDL_Init()`
+screen, pixel perfect scaling, VGA and the original scrolling). `config_load()` runs right after `SDL_Init()`
 in `game_main()`, before the window is created, so MODE decides that window, and
 it runs before `display_init()`, which is handed SCALING and reads the filter
 mode, so both are already in place when the texture is sized; FPS LIMIT is only
@@ -287,6 +287,20 @@ set too.
   centred by `game_view_x()` with black on the sides, and projectile range is
   kept at the original 320px on purpose, so a wider window changes nothing but
   what you can see.
+- SCROLLING has two cameras, both behind `game_view_x()`. ORIGINAL is the
+  original's: `game_adjust_scroll_to_dave()` notices Dave near an edge and
+  slides `scroll_offset` 15 columns, one a step, while `game_level()` draws
+  without ticking anything, so the game stands still during the slide. SMOOTH
+  keeps `view_px`, in pixels: `game_follow_dave()` runs right after Dave's tick
+  (never before, or he lags the view by a step) and moves it just enough to
+  keep him within `SMOOTH_DEAD_ZONE` of the middle, clamped to the level, so
+  the game never pauses. It moves at most `SMOOTH_CATCH_UP` (4, above Dave's
+  2) a step, except `game_set_scroll_to_dave()`'s snap on a level start or
+  respawn. Switching the row hands each camera the view the other left, and
+  the warp corridor zeroes both. No game logic reads either: monsters, plasma
+  and the bullet go by level positions only. In CGA the SMOOTH view is
+  rounded to an even pixel, since a composite pattern's colours depend on its
+  column's parity and a one pixel scroll would flip every dither's colour.
 - `display_compute_geometry()` pushes the picture down by half the difference
   between the two HUD bars, so the scene between them is what looks centered, but
   only as far as the window allows: a screen the picture exactly fills (1280x800
