@@ -18,11 +18,11 @@ test_invfreq: test_invfreq.c ../invfreq.c
 test_monster: test_monster.c ../tile.c ../plasma.c ../monster.c 
 	$(CC) test_monster.c ../tile.c ../plasma.c ../monster.c $(INCS) $(CFLAGS) -o test_monster $(LDFLAGS)
 
-test_display: test_display.c ../display.c ../filter.c ../ntsc.c
-	$(CC) test_display.c ../display.c ../filter.c ../ntsc.c $(INCS) $(CFLAGS) -o test_display $(LDFLAGS)
+test_display: test_display.c ../display.c ../filter.c ../composite.c ../ntsc.c
+	$(CC) test_display.c ../display.c ../filter.c ../composite.c ../ntsc.c $(INCS) $(CFLAGS) -o test_display $(LDFLAGS)
 
-test_filter: test_filter.c ../filter.c ../ntsc.c
-	$(CC) test_filter.c ../filter.c ../ntsc.c $(INCS) $(CFLAGS) -o test_filter $(LDFLAGS)
+test_filter: test_filter.c ../filter.c ../composite.c ../ntsc.c
+	$(CC) test_filter.c ../filter.c ../composite.c ../ntsc.c $(INCS) $(CFLAGS) -o test_filter $(LDFLAGS)
 
 clean:
 	rm -f test_config test_invfreq test_monster test_display test_filter

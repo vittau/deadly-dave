@@ -586,6 +586,7 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
     case PAUSE_OPTION_VIDEO:
         g_config.video_mode = (g_config.video_mode + 1) % VIDEO_MODE_COUNT;
         g_assets = g_asset_sets[g_config.video_mode];
+        filter_set_cga(g_config.video_mode == VIDEO_MODE_CGA);
         config_save(&g_config);
         break;
     case PAUSE_OPTION_FILTERS:
@@ -2572,6 +2573,7 @@ int game_main(int is_windowed, int starting_level) {
      * toggled.
      */
     filter_set_mode(g_config.filter);
+    filter_set_cga(g_config.video_mode == VIDEO_MODE_CGA);
 
     if (display_init(g_renderer, g_config.scaling) != 0) {
         printf("Failed to initialize the display. \n");

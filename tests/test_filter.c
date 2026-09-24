@@ -86,11 +86,93 @@ static void check_scanline_pattern(void) {
     expect_pixel("white is still dimmed a little", dst[1], 0xEAEAEAFFu);
 }
 
+static int channel(uint32_t p, int shift) {
+    return (int)((p >> shift) & 0xFF);
+}
+
+/*
+ * One channel averaged over the colour cycle starting at dst[16], in the
+ * middle of the row: the colour the eye sees under the fine structure the
+ * decoder leaves.
+ */
+static int cycle_channel(const uint32_t *dst, int shift) {
+    return (channel(dst[16], shift) + channel(dst[17], shift) +
+        channel(dst[18], shift) + channel(dst[19], shift)) / 4;
+}
+
+/* Renders 16 pixels of `a` on the even columns and `b` on the odd ones. */
+static void render_stripes(uint32_t a, uint32_t b, uint32_t *dst) {
+    uint32_t src[16];
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        src[i] = (i & 1) ? b : a;
+    }
+    filter_render(src, 16, 16, dst, 32, 1, 1);
+}
+
+/*
+ * The CGA composite model (reenigne's), through the NTSC mode while CGA is on:
+ * two output pixels per source pixel, white left as it is, the artifact colours
+ * of the published old CGA palette for one pixel white and black stripes
+ * (orange with white on the even columns, blue with it on the odd ones), what
+ * the game's own colours come out as (solid cyan a sea green, solid magenta a
+ * lavender, the title's magenta and black fire red), and a pixel pattern that
+ * decodes the same on every line, since the CGA's phase never moves.
+ */
+static void check_cga_composite(void) {
+    const uint32_t black = 0x000000FFu;
+    const uint32_t cyan = 0x55FFFFFFu;
+    const uint32_t magenta = 0xFF55FFFFu;
+    const uint32_t white = 0xFFFFFFFFu;
+    uint32_t pattern[2][16];
+    uint32_t dst[2 * 32];
+    int i;
+
+    filter_set_mode(FILTER_NTSC);
+    filter_set_cga(1);
+    expect_int("the composite image is twice as wide", filter_output_width(320), 640);
+
+    render_stripes(white, white, dst);
+    expect_pixel("solid white stays white", dst[16], 0xFFFFFFFFu);
+
+    render_stripes(white, black, dst);
+    expect_int("white and black stripes are the palette's orange",
+        cycle_channel(dst, 24) > 192 && cycle_channel(dst, 16) > 64 && cycle_channel(dst, 16) < 128 &&
+        cycle_channel(dst, 8) < 48, 1);
+    render_stripes(black, white, dst);
+    expect_int("the other way round, its medium blue",
+        cycle_channel(dst, 24) < 48 && cycle_channel(dst, 16) > 128 && cycle_channel(dst, 8) > 192, 1);
+
+    render_stripes(cyan, cyan, dst);
+    expect_int("solid cyan is a sea green",
+        cycle_channel(dst, 16) > cycle_channel(dst, 8) && cycle_channel(dst, 8) > cycle_channel(dst, 24), 1);
+
+    render_stripes(magenta, magenta, dst);
+    expect_int("solid magenta is a lavender",
+        cycle_channel(dst, 8) > cycle_channel(dst, 24) && cycle_channel(dst, 24) > cycle_channel(dst, 16), 1);
+
+    render_stripes(magenta, black, dst);
+    expect_int("the title's fire, magenta on the even columns, is red",
+        cycle_channel(dst, 24) > 128 && cycle_channel(dst, 16) < 96 && cycle_channel(dst, 8) < 96, 1);
+
+    for (i = 0; i < 16; i++) {
+        pattern[0][i] = pattern[1][i] = (i & 1) ? magenta : cyan;
+    }
+    filter_render(&pattern[0][0], 16, 16, dst, 32, 2, 2);
+    expect_pixel("a pattern is the same on the next line", dst[32 + 16], dst[16]);
+
+    filter_set_cga(0);
+    expect_int("off again, NTSC is the Blargg width", filter_output_width(320), 749);
+    filter_set_mode(FILTER_OFF);
+}
+
 int main(void) {
     printf("filter geometry \n");
 
     check_output_height();
     check_scanline_pattern();
+    check_cga_composite();
 
     if (failures == 0) {
         printf("  all checks passed \n");

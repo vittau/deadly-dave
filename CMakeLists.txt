@@ -48,7 +48,7 @@ if (WIN32)
 endif()
 
 set(DEADLY_DAVE_SOURCES "main.c" "game.c" "config.c" "display.c" "filter.c"
-    "ntsc.c" "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c"
+    "composite.c" "ntsc.c" "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c"
     "bullet.c")
 if (WIN32)
   list(APPEND DEADLY_DAVE_SOURCES "${DEADLY_DAVE_RC}")

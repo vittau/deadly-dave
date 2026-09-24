@@ -25,7 +25,9 @@ feel, with no emulator and nothing to install.
   playing.
 - **VGA, EGA or CGA:** the original's EGA and CGA artwork is there too, one
   menu row away.
-- **CRT filters:** scanlines, the Blargg NTSC composite filter, or both.
+- **CRT filters:** scanlines, the Blargg NTSC composite filter, or both. In CGA
+  mode NTSC is the CGA's own composite output, artifact colours included,
+  from reenigne's measurements of a real card.
 - **Assists:** no enemies, infinite lives or god mode, for a half, a third or a
   quarter of the points.
 - **Pause menu** (`Escape` / `Start`) with V-sync, FPS limit, window mode,

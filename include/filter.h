@@ -11,7 +11,10 @@
  *                     The bands are half a game row tall, so a 320x200 picture
  *                     is filtered as if it were shown on a 640x400 screen.
  *   FILTER_NTSC       runs the Blargg NTSC/composite filter (see ntsc.h),
- *                     which adds colour bleeding and rainbow fringing.
+ *                     which adds colour bleeding and rainbow fringing, or,
+ *                     while VIDEO MODE is CGA, the CGA composite model (see
+ *                     composite.h), which mixes pixel patterns into the
+ *                     card's artifact colours.
  *   FILTER_BOTH       NTSC first, then scanlines over its output.
  *
  * The mode is the pause menu's FILTERS row, persisted like the other rows (see
@@ -27,10 +30,13 @@
 
 void filter_set_mode(int mode);
 int  filter_mode(void);
+/* Whether the NTSC modes model a CGA card instead of running the Blargg filter. */
+void filter_set_cga(int enabled);
 
 /*
  * Width of the filtered image for a given source width. NTSC widens the image
- * (7 output columns per 3 input columns); the other modes leave it alone.
+ * (7 output columns per 3 input columns, or 2 per column for the CGA model);
+ * the other modes leave it alone.
  */
 int  filter_output_width(int src_width);
 

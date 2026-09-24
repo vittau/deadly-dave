@@ -3,6 +3,7 @@ BIN = ddave
 UNAME_S := $(shell uname -s)
 
 H_FILES := include/bullet.h
+H_FILES += include/composite.h
 H_FILES += include/config.h
 H_FILES += include/dave.h
 H_FILES += include/display.h
@@ -20,6 +21,7 @@ C_FILES += game.c
 C_FILES += config.c
 C_FILES += display.c
 C_FILES += filter.c
+C_FILES += composite.c
 C_FILES += ntsc.c
 C_FILES += tile.c
 C_FILES += dave.c
@@ -34,7 +36,8 @@ C_FILES += soundfx.c
 CFLAGS = -rdynamic -std=c99 -Wall
 CFLAGS += $(shell pkg-config --cflags sdl3)
 LIBS := $(shell pkg-config --libs sdl3)
-# The Blargg filter uses sin/cos/pow/exp; MSVC has them in its CRT.
+# The Blargg filter and the CGA composite model use sin/cos/pow/exp/sqrt;
+# MSVC has them in its CRT.
 LIBS += -lm
 
 all: $(BIN)

@@ -33,10 +33,14 @@ except the icons.
   `display.c`, and update its expected widths if the geometry changes. It links
   `filter.c` and `ntsc.c` as well, because `display.c` does; `tests/Makefile`
   adds `-lm` for the NTSC filter's `sin`/`cos`/`pow`/`exp`.
-- `./tests/test_filter` checks `filter_output_height` and the scanline pattern
+- `./tests/test_filter` checks `filter_output_height`, the scanline pattern
   (`filter_render` at twice and three times the source height, where a row that
-  straddles the dark half must come out blended). It is pure and links only
-  `filter.c` and `ntsc.c`.
+  straddles the dark half must come out blended) and the CGA composite model
+  (double width, white left white, white and black stripes decoding to the
+  published old CGA artifact palette's orange and blue, solid cyan sea green,
+  solid magenta lavender, the title fire red, a pattern the same on every
+  line). It is pure and links only
+  `filter.c`, `composite.c` and `ntsc.c`.
 - `test_display`, `test_filter` and `test_invfreq` (which writes `out.raw` into
   `tests/`) run headless. `test_monster` opens a window and needs a real display,
   so CI runs none of them.
@@ -118,7 +122,7 @@ Keep a new setting by adding it to `config_t`, to both branches of
   crushed, only saturated colours reaching full scale).
 - `filter.c` / `include/filter.h` owns the `FILTERS` mode
   (OFF/SCANLINES/NTSC/BOTH), quantises the framebuffer to RGB555, runs the
-  blitter, and applies the scanlines (luminance-weighted `>> 1`, alpha preserved,
+  blitter (or the CGA composite model), and applies the scanlines (luminance-weighted `>> 1`, alpha preserved,
   except the weight saturates at `SCANLINE_MAX_LUM` so white keeps a faint trace
   instead of escaping the effect entirely).
   The bands are **half a game row** tall, as if 320x200 were
@@ -132,8 +136,37 @@ Keep a new setting by adding it to `config_t`, to both branches of
   takes `src_height` and `out_height`.
   NTSC widens the image: `filter_output_width(w)` is `((w-1)/3 + 1) * 7`, so a
   320 pixel framebuffer becomes 749.
-- Both are `-lm` users (`sin`/`cos`/`pow`/`exp`), hence the extra link line in
-  the Makefile, CMakeLists.txt and tests/Makefile.
+- `composite.c` / `include/composite.h` takes NTSC's place while VIDEO MODE is
+  CGA (`filter_set_cga()`, called by `game.c` at startup and from the VIDEO
+  MODE row): the CGA's own composite output, since the Blargg filter is an
+  SNES encoder and cannot make the CGA's artifact colours (see `docs/CRT.md`
+  section 5). It is a port of reenigne's algorithm as 86Box carries it
+  (`src/video/vid_cga_comp.c`, GPL 2 or later, credited in the file), whose
+  `g_chroma_multiplexer[]` and `g_intensity[]` are his oscilloscope
+  measurements of a real card: the original IBM CGA (the "old" revision), BIOS
+  mode 4 with the colour burst on (what `UNPACKED_DAVE.EXE` sets, `mov ax,4;
+  int 10h` at `0x6d91`; it never sets mode 6 or touches the palette, so the
+  palette is the BIOS default bright cyan/magenta/white), a black border and
+  the emulators' default knobs. Vitor asked for the most realistic output, so
+  **nothing in it is tuned by eye**: do not bring back hue trims, a pixel
+  phase, saturation or edge damping. It builds the signal one hdot (14.318 MHz
+  dot, two per 320 pixel, four per colour cycle) at a time from each hdot's
+  colour, the next hdot's colour and its phase, and decodes it the way a plain
+  television does; each hdot is one output pixel, so `filter_output_width()`
+  is `2*w`. Column 0 of the framebuffer is phase 0, as the first active column
+  is on the card; the framebuffer width is a multiple of 8, so every centring
+  offset is a multiple of 4 pixels (two colour cycles) and the original
+  screen keeps the card's phase on any window. The port reproduces the
+  published 16 colour old CGA artifact palette (checked with 640-mode
+  patterns). On the game: solid cyan is a sea green (the water and the
+  trees), solid magenta a lavender (Dave's face), white on black fringes and
+  the title's magenta and black fire is red. A capture of Ultima II Vitor
+  gave did not match it at any tint (it needs a 90 degree turn and still
+  misses the fringes), so it comes from some other emulation; an earlier
+  version was fitted to it and to photos, which this replaced. The per frame
+  work is table lookups and a few integer sums per hdot.
+- All three are `-lm` users (`sin`/`cos`/`pow`/`exp`/`sqrt`), hence the
+  extra link line in the Makefile, CMakeLists.txt and tests/Makefile.
 - The pause menu's `FILTERS` row cycles the mode. Like V-SYNC/FPS/MODE it is
   kept between runs (see Settings); the saved mode is applied before
   `display_init()`, so the texture is built at the filtered size from the start.

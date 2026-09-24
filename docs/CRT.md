@@ -248,8 +248,72 @@ kept between runs in the settings file (see `config.c`).
 
 ---
 
-## 5. References
+## 5. CGA composite
+
+With VIDEO MODE on CGA, the `NTSC` and `BOTH` modes do not run the Blargg
+filter but `composite.c`, a model of the CGA card's own composite output. The
+Blargg filter cannot stand in for it, for three reasons:
+
+- **Clock.** The CGA's pixel clock is a whole multiple of the NTSC colour
+  subcarrier: in 320x200 a pixel is exactly half a colour cycle, so the pixel
+  pattern inside each cycle decides the colour a television decodes. That is
+  where the "artifact colours" of composite CGA come from. `snes_ntsc` models
+  the SNES, three pixels to every two cycles, so the same pattern lands on
+  other phases and decodes to other colours.
+- **Phase.** A CGA line is a whole number of colour cycles (912 clocks, 228
+  cycles), so every line starts on the same phase and a pattern gives the same
+  colour on every line and every frame. The SNES, and `snes_ntsc` with it,
+  turns the phase every line and frame, which is where its diagonal rainbow
+  comes from.
+- **Signal.** The CGA did not encode an RGB colour: it put out a roughly
+  square wave at the subcarrier whose phase was the colour, from a multiplexer
+  that does not switch instantly, plus a level for the intensity bit. So its
+  colours have their own saturations and brightnesses, unlike an RGB encoder.
+
+The filter is reenigne's CGA composite algorithm, ported from 86Box
+(`src/video/vid_cga_comp.c`, itself from his DOSBox patch, GPL 2 or later).
+Its tables are his oscilloscope measurements of a real card, so none of its
+colours are chosen: it is set up as the original IBM CGA (the "old" revision)
+in BIOS mode 4, the 320x200 four colour mode with the colour burst on, which is
+what Dangerous Dave sets (`mov ax,4; int 10h` in `UNPACKED_DAVE.EXE`, which
+never selects mode 6 or a palette, so the colours are the BIOS default bright
+cyan, magenta and white), with a black border and the default brightness,
+contrast, saturation, sharpness and hue.
+
+1. Every framebuffer pixel is mapped to the nearest of the 16 RGBI colours (a
+   32768 entry RGB555 table) and becomes two hdots, the card's 14.318 MHz
+   dots, four to a colour cycle.
+2. The signal level of an hdot comes from a 1024 entry table indexed by its
+   colour, the next hdot's colour and its phase in the colour cycle: the
+   measured output of the colour multiplexer (`g_chroma_multiplexer[]`, which
+   does not switch instantly, so a transition has its own shape) plus the
+   measured level of the intensity bits (`g_intensity[]`), scaled to 0-256.
+   Column 0 of the framebuffer is phase 0, as the first active column is on
+   the card, and every line starts on the same phase.
+3. Decoding, as a plain television does it: two chroma components a quarter
+   cycle apart are demodulated from a nine hdot window, luma is the signal
+   with the colour taken out, averaged over three hdots, and the components
+   rotate a quarter turn per hdot. The reference phase and gain come from the
+   card's colour burst, which is colour 6, and YIQ goes back to RGB with the
+   usual matrix.
+4. Each hdot is one output pixel, so the image is twice the source width.
+
+There is no adaptive filter: every sharp edge fringes, and a one pixel pattern
+decodes to a solid new colour. With the card's four colours, solid cyan comes
+out a sea green and solid magenta a lavender, white and black stripes orange or
+medium blue depending on which columns are lit, magenta and black red or blue.
+Driven with 640x200 patterns instead, the same port gives the published 16
+colour old CGA artifact palette, which is how the port was checked. Monitors
+had tint and colour knobs and CGA revisions differ, so a particular setup could
+look different, but this is the measured card at neutral settings.
+
+---
+
+## 6. References
 
 - Shay Green (Blargg), `snes_ntsc 0.2.2`, http://www.slack.net/~ant/ (LGPL 2.1).
+- reenigne (Andrew Jenner), CGA composite algorithm and measurements, as ported
+  in 86Box `src/video/vid_cga_comp.c` (GPL 2 or later):
+  https://github.com/86Box/86Box ; background: https://www.reenigne.org/blog/
 - ModdingWiki, Dangerous Dave level format (for the surrounding game, not the
   filter): https://moddingwiki.shikadi.net/wiki/Dangerous_Dave_Level_format

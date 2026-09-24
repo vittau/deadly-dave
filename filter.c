@@ -1,5 +1,6 @@
 /*
- * CRT-style output filters: scanlines and the Blargg NTSC filter.
+ * CRT-style output filters: scanlines and the Blargg NTSC filter, or the CGA
+ * composite model in its place while VIDEO MODE is CGA.
  *
  * Both read the finished 200 pixel tall RGBA8888 game framebuffer. NTSC writes
  * it back at the game's own resolution, scanlines write it at the destination's
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "composite.h"
 #include "filter.h"
 #include "ntsc.h"
 
@@ -45,6 +47,8 @@
 #define SCANLINE_UNIT 65536u
 
 static int g_mode = FILTER_OFF;
+/* Set while VIDEO MODE is CGA: the NTSC modes then use the CGA composite model. */
+static int g_cga = 0;
 static ntsc_filter_t *g_ntsc = NULL;
 static int g_ntsc_phase = 0;
 
@@ -63,13 +67,17 @@ int filter_mode(void) {
     return g_mode;
 }
 
+void filter_set_cga(int enabled) {
+    g_cga = enabled ? 1 : 0;
+}
+
 static int filter_ntsc_enabled(void) {
     return g_mode == FILTER_NTSC || g_mode == FILTER_BOTH;
 }
 
 int filter_output_width(int src_width) {
     if (filter_ntsc_enabled()) {
-        return ntsc_output_width(src_width);
+        return g_cga ? composite_output_width(src_width) : ntsc_output_width(src_width);
     }
     return src_width;
 }
@@ -228,7 +236,14 @@ void filter_render(const uint32_t *src, int src_pitch, int src_width,
         return;
     }
 
-    if (filter_ntsc_enabled() && ensure_ntsc()) {
+    if (filter_ntsc_enabled() && g_cga) {
+        /* The CGA has no frame to frame phase, so nothing advances here. */
+        composite_render(src, src_pitch, src_width, dst, dst_pitch, src_height);
+        if (scanlines) {
+            render_scanlines(dst, dst_pitch, composite_output_width(src_width), dst, dst_pitch,
+                src_height, out_height);
+        }
+    } else if (filter_ntsc_enabled() && ensure_ntsc()) {
         size_t pixels = (size_t)src_width * (size_t)src_height;
 
         out_width = ntsc_output_width(src_width);
@@ -266,6 +281,7 @@ void filter_render(const uint32_t *src, int src_pitch, int src_width,
 }
 
 void filter_quit(void) {
+    composite_quit();
     ntsc_destroy(g_ntsc);
     g_ntsc = NULL;
     free(g_input);
