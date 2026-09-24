@@ -4,120 +4,68 @@
 
 ![Level 2, whole, on a wide viewport](res/screenshots/screen4.png)
 
-An open source reimplementation of *Dangerous Dave*, a 1988 DOS game by John
-Romero, that runs natively on the machines we actually use now. The same
-sprites, the same levels, the same sound effects and the same feel, without an
-emulator and without anything to install.
+An open source reimplementation of *Dangerous Dave* (John Romero, 1988) that
+runs natively on Windows, macOS and Linux: the same sprites, levels, sounds and
+feel, with no emulator and nothing to install.
 
 > **Disclaimer:** the improvements in this fork were made possible by AI coding
-> agents, Claude Code and OpenCode (running DeepSeek models), working on top of
-> the sources below. Read the diff with that in mind.
+> agents, Claude Code and OpenCode (running DeepSeek models). Read the diff with
+> that in mind.
 
-## Why this one
+## Features
 
-- **Native on Windows, macOS and Linux.** Every download is self-contained:
-  SDL3 is built in, Windows needs no runtime, on macOS it is a regular app you
-  double-click with no terminal in sight, and on Linux the only things it uses
-  are the libraries every desktop already ships.
-- **Any display, any aspect ratio.** The viewport grows with the screen instead
-  of stretching the picture, so a wide screen shows more of the level rather
-  than a flattened one. A level narrower than the viewport is centred, with
-  black on the sides, and everything is scaled by whole numbers so the pixels
-  stay square and sharp. `F5` (or the pause menu's `SCALING` row) switches to a
-  mode that fills the whole screen, or to `1X`, `2X` and `3X`, which keep every
-  game pixel one, two or three screen pixels whatever the window size: an ultrawide screen
-  shows a very wide slice of the level, with black around the picture. The window can be resized
-  to whatever you like. The screenshot above is level 2 in full, on a screen wide enough to
-  hold it.
-- **Keyboard or controller, together.** The keyboard keeps the feel of the
-  original; a controller works out of the box and can be plugged in while
+- **The whole game:** all ten levels, the four warp zones, the intro, the ending
+  and the original sound effects.
+- **Self-contained downloads** for Windows, macOS and Linux, with SDL3 built in.
+- **Any screen:** a wider screen shows more of the level instead of stretching
+  it. Scaling is pixel perfect, fit to screen, or a fixed 1x/2x/3x.
+- **Steam Deck ready:** 1280x800 is exactly 4x the original, and the built-in
+  controls work as a gamepad.
+- **Keyboard and controller**, both at once, and a pad can be plugged in while
   playing.
-- **A pause menu with the settings that matter.** `Escape` (or `Start`) opens it
-  while playing or in a warp corridor: `V-SYNC` on/off, an `FPS LIMIT` of
-  30/60/120/refresh/unlimited, the `MODE` (full screen or windowed), the
-  `SCALING` (pixel perfect, stretched to fit, 1x, 2x or 3x), the `FILTERS` row,
-  `ASSISTS` and a `WARP` row that jumps straight to any level. `Up`/`Down`
-  moves, `Enter`/`Space` applies, `Escape` closes. Everything but `ASSISTS` and
-  `WARP` is kept between runs, in a `config.ini` in the system's per-user application folder
-  (the game writes nothing next to itself, so an installed app is never
-  touched). Deleting that file goes back to the defaults.
-- **Assists.** The `ASSISTS` row offers `NO ENEMIES` (the monsters and their
-  shots are gone), `INFINITE LIVES` (a death costs no life) and `GOD MODE`
-  (nothing hurts Dave: monsters, their shots, tall fires and vines go through
-  him, while water and the fire or vines that make up the floor turn solid, so
-  he stands on them instead of sinking in).
-  The points picked up while one is on are cut to a half, a third and a quarter
-  respectively. Changing it starts the run over on level 1 with no points and
-  three lives, as a `WARP` jump starts that level over, so a score is always
-  earned under one assist. It is not remembered: every launch starts with it
-  `OFF`.
-- **CRT filters.** The `FILTERS` row cycles the looks the game can be drawn
-  with: plain, scanlines, the Blargg NTSC composite filter (colour bleeding and
-  rainbow fringing), or both. The NTSC palette table is built the first time it
-  is selected, so later toggles are instant.
-- **Perfect on a Steam Deck.** On SteamOS it needs nothing installed: the
-  screen is 1280x800, exactly 4x the original 320x200, so the picture is pixel
-  perfect with no stretch and nothing is cut off. The built-in controls are
-  picked up as a gamepad (the title screen and the pause menu included), so it
-  plays the same in Gaming Mode, added as a non-Steam game, as on a desktop.
-- **Opens the way you left it.** `Cmd`+`Enter` on macOS, `Alt`+`Enter` anywhere
-  else, switches between full screen and windowed; that choice, like the pause
-  menu's, is remembered for the next run, and a first run starts full screen.
-  `-w` starts windowed for that one run without changing what is saved, and
-  `-l <level>` starts on a given level.
-- **The whole game**, all ten levels and all four bonus warp zones, each one the
-  full original map, with the intro, the ending screen and the original sound
-  effects decoded from the game's own data.
+- **CRT filters:** scanlines, the Blargg NTSC composite filter, or both.
+- **Assists:** no enemies, infinite lives or god mode, for a half, a third or a
+  quarter of the points.
+- **Pause menu** (`Escape` / `Start`) with V-sync, FPS limit, window mode,
+  scaling, filters, assists and a level warp. Settings are remembered between
+  runs, except assists and the warp.
 
 ![Level 6](res/screenshots/screen3.png)
 
 ## Controls
 
-| Action        | Keyboard                    | Controller                       |
-| ------------- | --------------------------- | -------------------------------- |
-| Move          | `A` / `D`, or left / right  | left stick or D-pad left / right |
-| Jump          | `W`, or up                  | `A`                              |
-| Climb         | `W` / `S`, or up / down     | stick or D-pad up / down         |
-| Shoot         | `Space`, or left Ctrl       | `X`, or right shoulder           |
-| Jetpack       | `J`                         | `B`                              |
-| Pause menu    | `Escape` opens it           | `Start` opens it                 |
-| In the menu   | `Up` / `Down` move, `Enter` / `Space` applies, `Escape` / `N` closes | stick or D-pad moves, `A` applies, `B` closes |
+| Action     | Keyboard                   | Controller               |
+| ---------- | -------------------------- | ------------------------ |
+| Move       | `A` / `D`, or arrows       | left stick or D-pad      |
+| Jump       | `W`, or up                 | `A`                      |
+| Climb      | `W` / `S`, or up / down    | stick or D-pad up / down |
+| Shoot      | `Space`, or left Ctrl      | `X`, or right shoulder   |
+| Jetpack    | `J`                        | `B`                      |
+| Pause menu | `Escape`                   | `Start`                  |
 
-On the keyboard up jumps, faithful to the original. On a pad it only climbs and
-flies, because jumping whenever a stick went up would be miserable, so there
-`A` is the jump. On the title screen any of the pad's face buttons, or `Start`,
-starts the game.
+`F5` cycles the scaling, and `Cmd`+`Enter` (macOS) or `Alt`+`Enter` toggles full
+screen. `-w` starts windowed and `-l <level>` starts on a given level.
 
 ## Getting it
 
-Download the package for your system from the
-[releases page](https://github.com/vittau/deadly-dave/releases). Each one is a
-folder with the game inside and nothing to install:
+Download your system's package from the
+[releases page](https://github.com/vittau/deadly-dave/releases):
 
-| System  | Package                                           |
-| ------- | ------------------------------------------------- |
-| Windows | `deadly-dave-windows-x86_64.zip`                  |
-| macOS   | `deadly-dave-macos-universal.zip` (Intel + Apple) |
-| Linux   | `deadly-dave-linux-x86_64.tar.gz`                 |
-
-On macOS, drag `Deadly Dave.app` to Applications. On Windows, unzip and run
-`deadly-dave.exe`. On Linux, unpack and run `./deadly-dave`.
+- **Windows:** `deadly-dave-windows-x86_64.zip`, run `deadly-dave.exe`.
+- **macOS:** `deadly-dave-macos-universal.zip`, drag `Deadly Dave.app` to
+  Applications.
+- **Linux:** `deadly-dave-linux-x86_64.tar.gz`, run `./deadly-dave`.
 
 ## Building it
 
-The game needs **SDL 3.4.16** or newer and a C99 compiler.
+Needs **SDL 3.4.16** or newer and a C99 compiler.
 
     make                 # uses pkg-config to find SDL3
-    make app             # macOS: wraps the game in "Deadly Dave.app"
+    make app             # macOS: builds "Deadly Dave.app"
     cd tests && make     # unit tests
 
-On macOS `make` also produces `Deadly Dave.app`: double-click that one, not the
-`ddave` binary, since a bare Unix executable always opens a Terminal when
-double-clicked.
-
-The CMake build fetches and links SDL3 statically instead, which is what the
-releases use. Pushing a tag (`git tag v1.0.0 && git push origin v1.0.0`) builds
-the three packages and publishes them.
+The CMake build fetches and links SDL3 statically, as the releases do. Pushing a
+`v*` tag builds and publishes the three packages.
 
 ## Acknowledgments
 
