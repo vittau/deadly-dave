@@ -1442,7 +1442,9 @@ static void game_do_bullets(game_context_t *game, tile_t *map, keys_state_t *key
             game->bullet = NULL;
         }
     } else {
-        if (keys->fire && game->dave->has_gun) {
+        /* A Dave that is exploding (BURNING) or already gone cannot shoot. */
+        if (keys->fire && game->dave->has_gun &&
+            game->dave->state != DAVE_STATE_BURNING && game->dave->state != DAVE_STATE_DEAD) {
             if (game->dave->face_direction == DAVE_DIRECTION_LEFT ||
                 game->dave->face_direction == DAVE_DIRECTION_FRONTL) {
                 game->bullet = bullet_create_left(game->dave->tile->x - 8, game->dave->tile->y + 8);
