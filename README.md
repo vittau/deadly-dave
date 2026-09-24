@@ -35,12 +35,22 @@ emulator and without anything to install.
 - **A pause menu with the settings that matter.** `Escape` (or `Start`) opens it
   while playing or in a warp corridor: `V-SYNC` on/off, an `FPS LIMIT` of
   30/60/120/refresh/unlimited, the `MODE` (full screen or windowed), the
-  `SCALING` (pixel perfect, stretched to fit, 1x, 2x or 3x), the `FILTERS` row and a `WARP`
-  row that jumps straight to any level. `Up`/`Down`
-  moves, `Enter`/`Space` applies, `Escape` closes. Everything but `WARP` is kept
-  between runs, in a `config.ini` in the system's per-user application folder
+  `SCALING` (pixel perfect, stretched to fit, 1x, 2x or 3x), the `FILTERS` row,
+  `ASSISTS` and a `WARP` row that jumps straight to any level. `Up`/`Down`
+  moves, `Enter`/`Space` applies, `Escape` closes. Everything but `ASSISTS` and
+  `WARP` is kept between runs, in a `config.ini` in the system's per-user application folder
   (the game writes nothing next to itself, so an installed app is never
   touched). Deleting that file goes back to the defaults.
+- **Assists.** The `ASSISTS` row offers `NO ENEMIES` (the monsters and their
+  shots are gone), `INFINITE LIVES` (a death costs no life) and `GOD MODE`
+  (nothing hurts Dave: monsters, their shots, tall fires and vines go through
+  him, while water and the fire or vines that make up the floor turn solid, so
+  he stands on them instead of sinking in).
+  The points picked up while one is on are cut to a half, a third and a quarter
+  respectively. Changing it starts the run over on level 1 with no points and
+  three lives, as a `WARP` jump starts that level over, so a score is always
+  earned under one assist. It is not remembered: every launch starts with it
+  `OFF`.
 - **CRT filters.** The `FILTERS` row cycles the looks the game can be drawn
   with: plain, scanlines, the Blargg NTSC composite filter (colour bleeding and
   rainbow fringing), or both. The NTSC palette table is built the first time it

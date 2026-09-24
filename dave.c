@@ -3,13 +3,34 @@
 
 #include "dave.h"
 
+/*
+ * What Dave cannot walk, jump or fall into: bricks, and in GOD MODE some of the
+ * tiles that would burn him, since a Dave who does not die in them would
+ * otherwise sink through the floor and loop back in at the top. Water is solid
+ * wherever it is; fire and vines only on the bottom row, where they are the
+ * floor, so a tall fire or a clump of vines higher up stays passable.
+ */
+static int dave_is_solid(dave_t *dave, tile_t *tile) {
+    if (tile->sprites[0] == 0) {
+        return 0;
+    }
+    if (tile->mod == BRICK) {
+        return 1;
+    }
+    if (!dave->solid_hazards || tile->mod != FIRE) {
+        return 0;
+    }
+    /* A burning tile keeps its first phase in sprites[0]; tile_tick() moves sprite_idx. */
+    return tile->sprites[0] == SPRITE_IDX_WATER1 ||
+        tile->y == (TILEMAP_HEIGHT - 1) * TILE_SIZE;
+}
 
 /*
  * Returns 1 if dave tile is collisioned in its right side. 0 otherwise
  */
 static int dave_collision_right(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
     for (int idx = 0; idx < TILEMAP_WIDTH * TILEMAP_HEIGHT; idx++) {
-        if (map[idx].sprites[0] != 0 && map[idx].mod == BRICK) {
+        if (dave_is_solid(dave, &map[idx])) {
             if (map[idx].is_inside(&map[idx], dave->tile->x + 12, dave->tile->y + 2)) {
                 return 1;
             }
@@ -26,7 +47,7 @@ static int dave_collision_right(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP
  */
 static int dave_collision_top(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
     for (int idx = 0; idx < TILEMAP_WIDTH * TILEMAP_HEIGHT; idx++) {
-        if (map[idx].sprites[0] != 0 && map[idx].mod == BRICK) {
+        if (dave_is_solid(dave, &map[idx])) {
             if (map[idx].is_inside(&map[idx], dave->tile->x + 4, dave->tile->y + 1)) {
                 return 1;
             }
@@ -43,7 +64,7 @@ static int dave_collision_top(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_H
  */
 static int dave_collision_left(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
     for (int idx = 0; idx < TILEMAP_WIDTH * TILEMAP_HEIGHT; idx++) {
-        if (map[idx].sprites[0] != 0 && map[idx].mod == BRICK) {
+        if (dave_is_solid(dave, &map[idx])) {
             if (map[idx].is_inside(&map[idx], dave->tile->x + 1, dave->tile->y + 2)) {
                 return 1;
             }
@@ -61,7 +82,7 @@ static int dave_collision_left(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_
  */
 static int dave_on_ground(dave_t *dave, tile_t map[TILEMAP_WIDTH * TILEMAP_HEIGHT]) {
     for (int idx = 0; idx < TILEMAP_WIDTH * TILEMAP_HEIGHT; idx++) {
-        if (map[idx].sprites[0] != 0 && map[idx].mod == BRICK) {
+        if (dave_is_solid(dave, &map[idx])) {
 
             /* This will allow climbing on right walls (original game's feature/bug)
              * if(map[idx].is_inside(&map[idx], dave->tile->x + 10, dave->tile->y+16)) {

@@ -58,6 +58,25 @@ static const char *g_filter_labels[FILTER_MODE_COUNT] = {
     "OFF", "SCANLINES", "NTSC", "BOTH"
 };
 
+/* A new run's lives: the one being played plus the three the HUD shows. */
+#define GAME_START_LIVES 4
+
+/*
+ * Pause menu ASSISTS row. Unlike the other rows it is not in config_t and never
+ * reaches the settings file: every launch starts with it OFF. Each one is its
+ * own mode, not a stack of the ones before it, and the points earned while it
+ * is on are divided by its index plus one (see game_add_score()).
+ */
+#define ASSIST_OFF            0
+#define ASSIST_NO_ENEMIES     1
+#define ASSIST_INFINITE_LIVES 2
+#define ASSIST_GOD_MODE       3
+#define ASSIST_COUNT          4
+static int g_assist = ASSIST_OFF;
+static const char *g_assist_labels[ASSIST_COUNT] = {
+    "OFF", "NO ENEMIES", "INFINITE LIVES", "GOD MODE"
+};
+
 /* Defined further down, alongside the other keyboard shortcut handling. */
 static void toggle_fullscreen(void);
 static void toggle_scale_mode(void);
@@ -362,6 +381,11 @@ static void draw_dave_offset(dave_t *dave, int view_x) {
 }
 
 static void draw_monsters_offset(monster_t *monsters[MAX_MONSTERS], int view_x) {
+    /* NO ENEMIES leaves them loaded, so turning it off brings them back as they were. */
+    if (g_assist == ASSIST_NO_ENEMIES) {
+        return;
+    }
+
     for (int i = 0; i < MAX_MONSTERS; i++) {
         tile_t *tile;
         int sprite;
@@ -460,9 +484,10 @@ static void draw_score(int score) {
 #define PAUSE_OPTION_MODE    2
 #define PAUSE_OPTION_SCALING 3
 #define PAUSE_OPTION_FILTERS 4
-#define PAUSE_OPTION_WARP    5
-#define PAUSE_OPTION_QUIT    6
-#define PAUSE_OPTION_COUNT   7
+#define PAUSE_OPTION_ASSISTS 5
+#define PAUSE_OPTION_WARP    6
+#define PAUSE_OPTION_QUIT    7
+#define PAUSE_OPTION_COUNT   8
 
 /* Levels on disk, res/levels/level1.ddt through level10.ddt; WARP cycles through them. */
 #define TOTAL_LEVELS 10
@@ -485,6 +510,9 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
     case PAUSE_OPTION_FILTERS:
         snprintf(out, out_size, "FILTERS: %s", g_filter_labels[filter_mode()]);
         break;
+    case PAUSE_OPTION_ASSISTS:
+        snprintf(out, out_size, "ASSISTS: %s", g_assist_labels[g_assist]);
+        break;
     case PAUSE_OPTION_WARP:
         snprintf(out, out_size, "WARP: %lu%s", (unsigned long)game->level,
             (game->level_secret_state == SECRET_LEVEL_ENTER) ? "S" : "");
@@ -496,10 +524,26 @@ static void pause_menu_option_text(game_context_t *game, int option, char *out, 
 }
 
 /*
+ * WARP and ASSISTS both start the run over on the level already picked in game:
+ * no points, the lives of a new game, and the level loaded right away so the
+ * scene behind the menu shows it. A score is only worth what it was earned
+ * under, so neither a jump nor an assist change may carry one over.
+ */
+static int pause_menu_restart_run(game_context_t *game, tile_t *map) {
+    game->score = 0;
+    game->lives = GAME_START_LIVES;
+    bullet_destroy(game->bullet);
+    game->bullet = NULL;
+    game->pause_level_changed = 1;
+    return game_load_current_level(game, map);
+}
+
+/*
  * Applies the currently selected row; QUIT is handled by the caller instead.
- * WARP jumps straight to a level and loads it right away, so the scene behind
- * the menu shows it immediately instead of only once the menu closes. Returns
- * 0, or a load error from the WARP row.
+ * WARP jumps straight to a level and ASSISTS goes back to level 1, and both
+ * load it right away, so the scene behind the menu shows it immediately
+ * instead of only once the menu closes. Returns 0, or a load error from one of
+ * those two rows.
  */
 static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option) {
     switch (option) {
@@ -525,6 +569,12 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
         filter_set_mode(g_config.filter);
         config_save(&g_config);
         break;
+    case PAUSE_OPTION_ASSISTS:
+        /* Not saved on purpose: a new launch always starts without assists. */
+        g_assist = (g_assist + 1) % ASSIST_COUNT;
+        game->level = 1;
+        game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
+        return pause_menu_restart_run(game, map);
     case PAUSE_OPTION_WARP:
         /*
          * A level with a secret twin gets an extra step on it before moving
@@ -536,9 +586,7 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
             game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
             game->level = (game->level % TOTAL_LEVELS) + 1;
         }
-        game->score = 0;
-        game->pause_level_changed = 1;
-        return game_load_current_level(game, map);
+        return pause_menu_restart_run(game, map);
     default:
         break;
     }
@@ -548,12 +596,14 @@ static int pause_menu_apply_option(game_context_t *game, tile_t *map, int option
 static void draw_pause_menu(game_context_t *game) {
     int offset = display_center_offset();
     /*
-     * 25 columns hold the longest row, "SCALING: PIXEL PERFECT", with the 18
-     * pixel indent the rows are drawn at; 12 rows hold the title and the seven
-     * rows, which are 10 pixels apart.
+     * 26 columns hold the longest row, "ASSISTS: INFINITE LIVES", with the 18
+     * pixel indent the rows are drawn at; 13 rows hold the title and the eight
+     * rows, which are 10 pixels apart and start 22 pixels down, so the last one
+     * clears the bottom edge by as much as it did when there were seven.
      */
-    const int columns = 25;
-    const int rows = 12;
+    const int columns = 26;
+    const int rows = 13;
+    const int first_row = 22;
     int box_x = offset + ((DISPLAY_BASE_WIDTH - (columns * 8)) / 2);
     int box_y = DISPLAY_SCENE_TOP + (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (rows * 8)) / 2);
     char line[32];
@@ -565,11 +615,11 @@ static void draw_pause_menu(game_context_t *game) {
         pause_menu_option_text(game, i, line, sizeof(line));
         /* +18, not +16: the cursor's biggest frame fills its 8x8 tile, so it
          * would otherwise touch the text (the tile ends at box_x + 16). */
-        draw_text_line(line, box_x + 18, box_y + 24 + (i * 10), 1);
+        draw_text_line(line, box_x + 18, box_y + first_row + (i * 10), 1);
     }
 
     game->flashing_cursor.x = box_x + 8;
-    game->flashing_cursor.y = box_y + 24 + (game->pause_selected * 10);
+    game->flashing_cursor.y = box_y + first_row + (game->pause_selected * 10);
     draw_tile(&game->flashing_cursor);
     game->flashing_cursor.tick(&game->flashing_cursor);
 }
@@ -798,7 +848,7 @@ static int load_assets(void) {
  * Set game and monster properties to default values
  */
 static void init_game(game_context_t *game) {
-    game->lives = 4;
+    game->lives = GAME_START_LIVES;
     game->score = 0;
 
     game->scroll_offset = 0;
@@ -1400,6 +1450,11 @@ static void game_set_scroll_to_dave(game_context_t *game) {
     while (game_adjust_scroll_to_dave(game) != 0) {};
 }
 
+/* Points earned while an assist is on are cut to a half, a third or a quarter. */
+static void game_add_score(game_context_t *game, int value) {
+    game->score = game->score + (uint64_t)(value / (g_assist + 1));
+}
+
 static void game_do_map(tile_t *map) {
     for (int i = 0; i < TILEMAP_WIDTH * TILEMAP_HEIGHT; i++) {
         if (map[i].sprites[0] != 0) {
@@ -1618,20 +1673,28 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     }
 
     // Tick dave, monsters, and all block tiles in map
+    game->dave->solid_hazards = (g_assist == ASSIST_GOD_MODE);
     game->dave->tick(game->dave, map, keys->left, keys->right, keys->jump, keys->climb_up, keys->down, keys->jetpack);
 
-    for (int i = 0; i < MAX_MONSTERS; i++) {
-        if (game->monsters[i] != NULL) {
-            game->monsters[i]->tick(game->monsters[i], game->dave->tile->x);
+    /* NO ENEMIES freezes the monsters and their plasma where they are, unseen. */
+    if (g_assist != ASSIST_NO_ENEMIES) {
+        for (int i = 0; i < MAX_MONSTERS; i++) {
+            if (game->monsters[i] != NULL) {
+                game->monsters[i]->tick(game->monsters[i], game->dave->tile->x);
+            }
         }
     }
 
     game_do_map(map);
-    game_do_plasmas(game, map);
+    if (g_assist != ASSIST_NO_ENEMIES) {
+        game_do_plasmas(game, map);
+    }
     game_do_bullets(game, map, keys);
 
     if (dave->is_dead(game->dave)) {
-        game->lives--;
+        if (g_assist != ASSIST_INFINITE_LIVES) {
+            game->lives--;
+        }
         game->dave->state = DAVE_STATE_STANDING;
         game->dave->jump_state = 0;
         game->dave->step_count = 0;
@@ -1649,7 +1712,7 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
                 collision_detect(game->dave->tile, &map[idx])) {
 
             if (map[idx].mod == LOOT) {
-                game->score = game->score + map[idx].score_value;
+                game_add_score(game, map[idx].score_value);
                 map[idx].sprites[0] = 0;
                 map[idx].mod = 0;
                 g_soundfx->play(g_soundfx, TUNE_TREASURE);
@@ -1658,14 +1721,14 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
                 game->dave->has_trophy = 1;
                 map[idx].mod = 0;
                 map[idx].sprites[0] = 0;
-                game->score = game->score + map[idx].score_value;
+                game_add_score(game, map[idx].score_value);
                 g_soundfx->play(g_soundfx, TUNE_GOT_TROPHY);
 
             } else if (map[idx].mod == GUN) {
                 game->dave->has_gun = 1;
                 map[idx].mod = 0;
                 map[idx].sprites[0] = 0;
-                game->score = game->score + map[idx].score_value;
+                game_add_score(game, map[idx].score_value);
                 g_soundfx->play(g_soundfx, TUNE_GOT_SOMETHING);
 
             } else if (map[idx].mod == JETPACK) {
@@ -1682,7 +1745,8 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
                 }
 
             } else if (map[idx].mod == FIRE) {
-                if (game->dave->on_fire != 1) {
+                /* In GOD MODE fire is solid instead (see dave_is_solid()). */
+                if (game->dave->on_fire != 1 && g_assist != ASSIST_GOD_MODE) {
                     game->dave->on_fire = 1;
                     g_soundfx->stop(g_soundfx);
                     g_soundfx->play(g_soundfx, TUNE_OUCH);
@@ -1722,7 +1786,11 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
         game->dave->tile->y = -20;
     }
 
-    for (int idx = 0; idx < 5; idx++) {
+    /*
+     * Hidden monsters cannot be shot or touched, and in GOD MODE neither a
+     * monster nor its plasma does anything to Dave: they go through him.
+     */
+    for (int idx = 0; idx < 5 && g_assist != ASSIST_NO_ENEMIES; idx++) {
         if (game->monsters[idx] != NULL) {
             if (game->bullet != NULL) {
                 if (collision_detect(game->bullet->tile, game->monsters[idx]->tile)) {
@@ -1736,7 +1804,8 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
                 }
             }
 
-            if (collision_detect(game->dave->tile, game->monsters[idx]->tile)) {
+            if (g_assist != ASSIST_GOD_MODE &&
+                    collision_detect(game->dave->tile, game->monsters[idx]->tile)) {
                 if (game->monsters[idx]->is_alive(game->monsters[idx])) {
                     game->dave->on_fire = 1;
                     game->monsters[idx]->on_fire = 1;
@@ -1747,7 +1816,8 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
         }
     }
 
-    for (int idx = 0; idx < MAX_MONSTERS; idx++) {
+    for (int idx = 0; idx < MAX_MONSTERS &&
+            g_assist != ASSIST_NO_ENEMIES && g_assist != ASSIST_GOD_MODE; idx++) {
         if (game->monsters[idx] != NULL) {
             if (game->monsters[idx]->plasma != NULL) {
                 if (collision_detect(game->dave->tile, game->monsters[idx]->plasma->tile)) {

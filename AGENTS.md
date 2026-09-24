@@ -56,7 +56,22 @@ except the icons.
 
 ## Settings
 
-The pause menu rows are kept between runs. `config.c` / `include/config.h` owns
+The pause menu rows are kept between runs, except WARP and ASSISTS. ASSISTS
+(`g_assist` in `game.c`: OFF, NO ENEMIES, INFINITE LIVES, GOD MODE) is kept out
+of `config_t` on purpose, so every launch starts with it OFF; do not add it to
+the file. Each assist is a mode of its own, not a stack, and every score gain
+goes through `game_add_score()`, which divides it by the assist index plus one.
+GOD MODE makes water, and the fire and vines on the bottom map row, solid for
+Dave through `dave->solid_hazards`, set by `game_level()` before each tick and
+read by `dave_is_solid()` in `dave.c`: a Dave who cannot burn would otherwise
+sink through the floor and loop back in at the top of the screen. Fire and
+vines above the bottom row stay passable on purpose. NO ENEMIES leaves the monsters loaded and only skips their tick, drawing and
+collisions, so turning it off brings them back where they were. Changing
+ASSISTS restarts the run on level 1 and a WARP jump restarts it on the level
+jumped to, both through `pause_menu_restart_run()` (score 0, `GAME_START_LIVES`),
+so a score is never carried across an assist change or a jump.
+
+`config.c` / `include/config.h` owns
 them: `config_t` carries V-SYNC, FPS LIMIT, FILTERS, MODE and SCALING, with the
 defaults in the `g_config` initializer in `game.c` (a first run, or a deleted
 file, gets vsync on, the frame paced to the display's refresh, no filter, full

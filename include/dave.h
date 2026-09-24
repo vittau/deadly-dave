@@ -54,6 +54,8 @@ typedef struct dave_struct {
     int on_tree;
     int ticks_in_state;
     int mute;
+    /* Set by the game each step in GOD MODE: water and floor fire block him like bricks. */
+    int solid_hazards;
 
     // sub-states & helpers specific to states
     int walk_state;
