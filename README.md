@@ -53,7 +53,11 @@ Download your system's package from the
 
 - **Windows:** `deadly-dave-windows-x86_64.zip`, run `deadly-dave.exe`.
 - **macOS:** `deadly-dave-macos-universal.zip`, drag `Deadly Dave.app` to
-  Applications.
+  Applications. The app is not notarized, so clear the quarantine flag once
+  before opening it:
+
+      xattr -dr com.apple.quarantine "/Applications/Deadly Dave.app"
+
 - **Linux:** `deadly-dave-linux-x86_64.tar.gz`, run `./deadly-dave`.
 
 ## Building it
