@@ -52,6 +52,20 @@ feel, with no emulator and nothing to install.
 `F5` cycles the scaling, and `Cmd`+`Enter` (macOS) or `Alt`+`Enter` toggles full
 screen. `-w` starts windowed and `-l <level>` starts on a given level.
 
+## High scores
+
+As in the original, a run that ends on a score beating one of the five rows
+asks for a name of up to three characters. Type it and press `Enter`, or, on a
+controller, pick each character with the D-pad up / down and take it with `A`
+(`B` erases, `Start` keeps the name). A score made with an assist is marked
+with a star.
+
+The table and the settings are kept in `highscores.ini` and `config.ini`, in
+`~/Library/Application Support/vittau/deadly-dave/` on macOS,
+`%APPDATA%\vittau\deadly-dave\` on Windows and
+`~/.local/share/vittau/deadly-dave/` on Linux. Deleting a file brings back its
+defaults.
+
 ## Getting it
 
 Download your system's package from the

@@ -391,7 +391,10 @@ The font is in every folder, from the original's font for that mode (see
   popup. That popup is answered with the pad's `A` (yes, `key_y`) and `B` (no,
   `key_n`); `X` shoots and `B` also toggles the jetpack, so do not reuse those
   buttons without checking what reads the flag. `keys_state.key_y`, `.key_n`,
-  `.enter` and `.quit` are only read by the popups and the intro.
+  `.enter` and `.quit` are only read by the popups, the intro, the ending and
+  the end of run screens. The pad's `A`, `B` and D-pad also raise the high
+  score name's one shots (`pick_accept`, `erase`, `pick_up`/`pick_down`),
+  which nothing else reads.
 - `game_shutdown()` is the only exit path. Route new exits through it so the
   process really terminates instead of leaving a window-less process behind.
 - Portability, since the Windows CI job is MSVC: `access()`/`chdir()` are POSIX,
@@ -454,9 +457,10 @@ The font is in every folder, from the original's font for that mode (see
   coordinates, not at the viewport edge. Both used to follow the viewport, which
   made the corridor show its undrawn length and the intermission last as long as
   the corridor on a wide window.
-- `get_keys()` writes `keys_state.enter` and `.quit` and never clears them, and
-  only the intro reads `enter`. Do not use them as edge triggered inside the
-  game loop.
+- `get_keys()` never clears `keys_state.quit` once it is set. `enter` is
+  rebuilt by every call, raised only by a fresh Return or a pad button event,
+  so it is one shot; the pause menu still keeps its own edge
+  (`pause_prev_confirm`), since a pad's `A` and Start both raise it.
 - F10 is a development shortcut that jumps to the ending screen from any game
   state, so the last screen can be looked at without playing the ten levels. It
   is a one shot flag on `keys_state_t.congrats`, set by `get_keys()` and read at
