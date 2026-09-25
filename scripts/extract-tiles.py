@@ -33,8 +33,8 @@ any drawn pixel that falls off.
 The VGA sprites that carry an alpha channel get theirs rebuilt the same way it
 was built for VGA: Dave's frames from the matching mask tile (black in the
 mask is the sprite), the bullet from its non-black pixels. Tiles the original
-never had (the font, the popup box pieces and a few port additions) are not
-written: the game falls back to res/tiles for those.
+never had (the popup box pieces and a few port additions) are not written: the
+game falls back to res/tiles for those. The font is extract-font.py's.
 
 usage: extract-tiles.py [original directory] [res directory]
 """

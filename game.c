@@ -21,6 +21,7 @@
 #include "config.h"
 #include "display.h"
 #include "filter.h"
+#include "highscore.h"
 #include "soundfx.h"
 
 
@@ -96,6 +97,9 @@ static int g_assist = ASSIST_OFF;
 static const char *g_assist_labels[ASSIST_COUNT] = {
     "OFF", "NO ENEMIES", "INFINITE LIVES", "GOD MODE"
 };
+
+/* Read from highscores.ini at startup and written back once a new row is named. */
+static highscore_table_t g_highscores;
 
 /* Defined further down, alongside the other keyboard shortcut handling. */
 static void toggle_fullscreen(void);
@@ -315,8 +319,12 @@ static void draw_tile_centered(tile_t *tile) {
     render_tile_idx(tile->get_sprite(tile), tile->x + display_center_offset(), tile->y);
 }
 
-/* The font tiles follow this order, 100 indices apart for the black set. */
-static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?-':";
+/*
+ * The font tiles follow this order, 100 indices apart for the black set, and
+ * scripts/extract-font.py writes them in it from the original's font. A new
+ * glyph goes at the end of both; '*' is the high score table's assist mark.
+ */
+static const char font_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ,.()!?-':*";
 
 static void draw_char(char c, int x, int y, int is_black) {
     const char *letter = memchr(font_chars, c, sizeof(font_chars) - 1);
@@ -1071,14 +1079,26 @@ static void gamepad_event(SDL_Event *event, keys_state_t *state) {
         gamepad_open();
 
     } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+        state->pressed = 1;
         if (event->gbutton.button == SDL_GAMEPAD_BUTTON_SOUTH) {
-            /* The pause menu's A/confirm. */
+            /* The pause menu's A/confirm, and the high score picker's "take this letter". */
             state->key_y = 1;
             state->enter = 1;
+            state->pick_accept = 1;
         } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_EAST) {
             state->jetpack = 1;
-            /* The pause menu's B/close. */
+            /* The pause menu's B/close, and the high score name's erase. */
             state->key_n = 1;
+            state->erase = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_UP) {
+            /* The D-pad is also read as held by gamepad_update(); these are the picker's steps. */
+            state->pick_up = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_DOWN) {
+            state->pick_down = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_LEFT) {
+            state->erase = 1;
+        } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+            state->pick_accept = 1;
         } else if (event->gbutton.button == SDL_GAMEPAD_BUTTON_START) {
             /*
              * Start is Escape once the game is running, but it is also the
@@ -1122,9 +1142,43 @@ static void get_keys(keys_state_t* state) {
     state->enter = 0;
     /* F10 is one shot too, and read by game_state_step() on the step that sees it. */
     state->congrats = 0;
+    /* The end of run screens' one shots, see keys_state_t. */
+    state->pressed = 0;
+    state->typed = 0;
+    state->erase = 0;
+    state->pick_up = 0;
+    state->pick_down = 0;
+    state->pick_accept = 0;
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_KEY_DOWN) {
             int is_repeat = event.key.repeat;
+            SDL_Keycode key = event.key.key;
+
+            /*
+             * A name is typed by what the key says, not where it sits, so
+             * the keycode and not the scancode; held keys repeat, as they do
+             * in any text field. The shortcuts below are not a press.
+             */
+            if (key >= SDLK_A && key <= SDLK_Z) {
+                state->typed = 'A' + (int)(key - SDLK_A);
+            } else if ((key >= SDLK_0 && key <= SDLK_9) || key == SDLK_SPACE ||
+                    key == SDLK_PERIOD || key == SDLK_MINUS || key == SDLK_APOSTROPHE) {
+                state->typed = (int)key;
+            } else if (key == SDLK_BACKSPACE || key == SDLK_LEFT) {
+                state->erase = 1;
+            } else if (key == SDLK_UP) {
+                state->pick_up = 1;
+            } else if (key == SDLK_DOWN) {
+                state->pick_down = 1;
+            } else if (key == SDLK_RIGHT) {
+                state->pick_accept = 1;
+            }
+            if (is_repeat == 0 && event.key.scancode != SDL_SCANCODE_F5 &&
+                    event.key.scancode != SDL_SCANCODE_F10 &&
+                    !(event.key.scancode == SDL_SCANCODE_RETURN &&
+                      (event.key.mod & TOGGLE_FULLSCREEN_MOD) != 0)) {
+                state->pressed = 1;
+            }
             /* Edge triggered: the jetpack is a toggle, holding the key is not meant to flip it. */
             if (event.key.scancode == SDL_SCANCODE_J && is_repeat == 0) {
                 state->jetpack = 1;
@@ -1796,6 +1850,29 @@ static int game_warp_exit_level(int level) {
     }
 }
 
+/*
+ * Ends the run, on the last life or after the ending, as the original does on
+ * both: a score that beats a row of the table takes it and the player names it,
+ * otherwise a lost run shows GAME OVER first; either way the table follows and
+ * then the title screen. A score earned under an assist is marked in its row.
+ */
+static int game_end_run(game_context_t *game, int won) {
+    int level = won ? HIGHSCORE_LEVEL_WON : (int)game->level;
+
+    game->run_won = won;
+    game->end_timer = 0;
+    game->highscore_row = highscore_insert(&g_highscores, (uint32_t)game->score, level,
+        g_assist != ASSIST_OFF);
+
+    if (game->highscore_row >= 0) {
+        game->highscore_name_length = 0;
+        game->highscore_pick = 0;
+        game->highscore_picking = 0;
+        return G_STATE_HIGHSCORE_NAME;
+    }
+    return won ? G_STATE_HIGHSCORE_TABLE : G_STATE_GAMEOVER_BANNER;
+}
+
 static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
     dave_t *dave = game->dave;
     if (keys->quit) {
@@ -1851,7 +1928,7 @@ static int game_level(game_context_t *game, tile_t *map, keys_state_t *keys) {
         game->dave->on_fire = 0;
 
         if (game->lives == 0) {
-            return G_STATE_GAMEOVER;
+            return game_end_run(game, 0);
         }
 
         return G_STATE_LEVEL_START;
@@ -2287,11 +2364,10 @@ static void draw_grail_frame(int x, int y, int columns, int rows, int phase) {
 /*
  * The ending screen, shown once the last level is done: the text the original
  * puts in the executable, inside a frame of grails (the trophies that open a
- * level's door). The line under the title carries the score the run ended on,
- * which is the last place the player gets to see it. Any key or pad button
- * starts a fresh run on level 5.
+ * level's door). The line under the title carries the score the run ended on.
+ * It is also the scene behind the high score table of a won run.
  */
-static int game_congrats(game_context_t *game, keys_state_t *keys) {
+static void draw_congrats(game_context_t *game) {
     char points[16];
     const char *lines[] = {
         "CONGRATULATIONS!",
@@ -2313,10 +2389,6 @@ static int game_congrats(game_context_t *game, keys_state_t *keys) {
 
     /* Five digits with leading zeroes, the way the HUD's score is drawn. */
     snprintf(points, sizeof(points), "POINTS: %05lu", (unsigned long)game->score);
-
-    if (keys->quit) {
-        return G_STATE_QUIT_NOW;
-    }
 
     clear_screen();
 
@@ -2379,15 +2451,232 @@ static int game_congrats(game_context_t *game, keys_state_t *keys) {
                 text_top + (i * line_height), 0);
         }
     }
+}
+
+/*
+ * Any key or pad button ends the run, which checks the score against the
+ * table and then goes back to the title screen, as the original does.
+ */
+static int game_congrats(game_context_t *game, keys_state_t *keys) {
+    if (keys->quit) {
+        return G_STATE_QUIT_NOW;
+    }
+
+    draw_congrats(game);
 
     if (keys->enter || keys->space || keys->jump || keys->fire || keys->jetpack ||
             keys->climb_up || keys->down || keys->left || keys->right ||
             keys->key_y || keys->key_n) {
-        game->level = 5;
-        game->level_secret_state = SECRET_LEVEL_NOT_VISITED;
-        return G_STATE_NONE;
+        return game_end_run(game, 1);
     }
     return G_STATE_CONGRATS;
+}
+
+/*
+ * How long the GAME OVER banner and the table stay up with nobody touching
+ * anything: the original waits 1000 of its frames on each, and one of its
+ * frames is one 14 ms step here.
+ */
+#define RUN_END_SCREEN_STEPS 1000
+/*
+ * A press this early is still the fight that lost the last life, so it does
+ * not skip the screen the player has not had the time to read.
+ */
+#define RUN_END_SCREEN_GUARD 30
+
+/* The high score box, in 8 pixel popup tiles, and where its columns start. */
+#define HIGHSCORE_BOX_COLUMNS 26
+#define HIGHSCORE_BOX_ROWS    15
+#define HIGHSCORE_SCORE_X     32
+#define HIGHSCORE_NAME_X      88
+#define HIGHSCORE_LEVEL_X     152
+
+/*
+ * One step of the scene the end of a run shows its boxes over: the ending for a
+ * won run, otherwise the level Dave lost his last life on, with its fire and
+ * water still moving, as the original keeps animating it, and the monsters
+ * where they stopped.
+ */
+static void run_end_scene_step(game_context_t *game, tile_t *map) {
+    if (game->run_won) {
+        draw_congrats(game);
+        return;
+    }
+
+    game_do_map(map);
+    clear_screen();
+    draw_map(game, map);
+    draw_monsters_offset(game->monsters, game_view_x(game));
+    draw_level_frame(game);
+}
+
+/*
+ * The original's message bar: a popup box across the bottom three text rows of
+ * the 320 pixel screen, over the lower HUD, with one line centred in it.
+ */
+static void draw_bottom_banner(const char *text) {
+    const int columns = DISPLAY_BASE_WIDTH / 8;
+    const int rows = 3;
+    int box_x = display_center_offset();
+    int box_y = DISPLAY_HEIGHT - (rows * 8);
+
+    draw_popup_box(box_x, box_y, rows, columns);
+    draw_text_line(text, box_x + ((DISPLAY_BASE_WIDTH - ((int)strlen(text) * 8)) / 2),
+        box_y + 8, 1);
+}
+
+/*
+ * The HIGH SCORES box, laid out as the original's: SCORE, NAME and LEVEL under
+ * their dashes, five rows two text lines apart. A finished game's level reads
+ * WON and an assisted row has a star after its level. editing_row is the row
+ * whose name is being typed, which gets the cursor, or -1.
+ */
+static void draw_highscore_table(game_context_t *game, int editing_row) {
+    int box_x = display_center_offset() + ((DISPLAY_BASE_WIDTH - (HIGHSCORE_BOX_COLUMNS * 8)) / 2);
+    int box_y = DISPLAY_SCENE_TOP +
+        (((DISPLAY_SCENE_BOTTOM - DISPLAY_SCENE_TOP) - (HIGHSCORE_BOX_ROWS * 8)) / 2);
+    char text[16];
+
+    draw_popup_box(box_x, box_y, HIGHSCORE_BOX_ROWS, HIGHSCORE_BOX_COLUMNS);
+    draw_text_line("HIGH SCORES", box_x + (((HIGHSCORE_BOX_COLUMNS * 8) - (11 * 8)) / 2), box_y + 8, 1);
+    draw_text_line("SCORE  NAME  LEVEL", box_x + HIGHSCORE_SCORE_X, box_y + 24, 1);
+    draw_text_line("-----  ----  -----", box_x + HIGHSCORE_SCORE_X, box_y + 32, 1);
+
+    for (int i = 0; i < HIGHSCORE_COUNT; i++) {
+        const highscore_entry_t *entry = &g_highscores.entries[i];
+        int y = box_y + 40 + (i * 16);
+        int level_x = box_x + HIGHSCORE_LEVEL_X;
+
+        snprintf(text, sizeof(text), "%05lu", (unsigned long)entry->score);
+        draw_text_line(text, box_x + HIGHSCORE_SCORE_X, y, 1);
+        draw_text_line(entry->name, box_x + HIGHSCORE_NAME_X, y, 1);
+
+        if (entry->level == HIGHSCORE_LEVEL_WON) {
+            /* One column to the left, so WON sits centred under LEVEL. */
+            snprintf(text, sizeof(text), "WON%s", entry->assisted ? "*" : "");
+            level_x -= 8;
+        } else {
+            snprintf(text, sizeof(text), "%d%s", entry->level, entry->assisted ? "*" : "");
+        }
+        draw_text_line(text, level_x, y, 1);
+
+        if (i == editing_row && game->highscore_name_length < HIGHSCORE_NAME_LENGTH) {
+            int x = box_x + HIGHSCORE_NAME_X + (game->highscore_name_length * 8);
+
+            /*
+             * The controller's picker shows the letter it would take, blinking;
+             * until it is used, the slot has the flashing cursor instead.
+             */
+            if (game->highscore_picking) {
+                if ((game->end_timer / 16) % 2 == 0) {
+                    draw_char(highscore_name_chars[game->highscore_pick], x, y, 1);
+                }
+            } else {
+                game->flashing_cursor.x = x;
+                game->flashing_cursor.y = y;
+                draw_tile(&game->flashing_cursor);
+                game->flashing_cursor.tick(&game->flashing_cursor);
+            }
+        }
+    }
+}
+
+/*
+ * A lost run with no high score: GAME OVER in the bottom bar over the level,
+ * as the original, until a press or the timeout, and then the table.
+ */
+static int game_gameover_banner(game_context_t *game, tile_t *map, keys_state_t *keys) {
+    if (keys->quit) {
+        return G_STATE_QUIT_NOW;
+    }
+
+    run_end_scene_step(game, map);
+    draw_bottom_banner("GAME OVER");
+
+    game->end_timer++;
+    if ((keys->pressed && game->end_timer > RUN_END_SCREEN_GUARD) ||
+            game->end_timer >= RUN_END_SCREEN_STEPS) {
+        game->end_timer = 0;
+        return G_STATE_HIGHSCORE_TABLE;
+    }
+    return G_STATE_GAMEOVER_BANNER;
+}
+
+/*
+ * The name of a new high score, up to three characters. On the keyboard it is
+ * typed, Backspace or Left erases and Enter keeps it, as in the original. On a
+ * controller Up and Down step through the characters, A or Right takes the one
+ * shown and B or Left erases; A with the name full, or Start, keeps it. The
+ * table is saved once the name is in, and the title screen follows.
+ */
+static int game_highscore_name(game_context_t *game, tile_t *map, keys_state_t *keys) {
+    const int char_count = (int)strlen(highscore_name_chars);
+    char *name = g_highscores.entries[game->highscore_row].name;
+    int confirm = 0;
+
+    if (keys->quit) {
+        return G_STATE_QUIT_NOW;
+    }
+
+    if (keys->typed != 0 && highscore_name_char_ok((char)keys->typed)) {
+        if (game->highscore_name_length < HIGHSCORE_NAME_LENGTH) {
+            name[game->highscore_name_length++] = (char)keys->typed;
+            name[game->highscore_name_length] = '\0';
+        }
+        game->highscore_picking = 0;
+    } else if (keys->erase) {
+        if (game->highscore_name_length > 0) {
+            name[--game->highscore_name_length] = '\0';
+        }
+    } else if (keys->pick_up || keys->pick_down) {
+        /* The first step only brings the picker up, on the letter it last showed. */
+        if (game->highscore_picking) {
+            game->highscore_pick = (game->highscore_pick + (keys->pick_up ? char_count - 1 : 1)) % char_count;
+        }
+        game->highscore_picking = 1;
+        game->end_timer = 0;
+    } else if (keys->pick_accept) {
+        if (game->highscore_name_length >= HIGHSCORE_NAME_LENGTH) {
+            confirm = 1;
+        } else if (game->highscore_picking) {
+            name[game->highscore_name_length++] = highscore_name_chars[game->highscore_pick];
+            name[game->highscore_name_length] = '\0';
+        } else {
+            game->highscore_picking = 1;
+            game->end_timer = 0;
+        }
+    } else if (keys->enter) {
+        /* Enter on the keyboard, or the pad's Start; the pad's A was taken above. */
+        confirm = 1;
+    }
+
+    game->end_timer++;
+    run_end_scene_step(game, map);
+    draw_highscore_table(game, confirm ? -1 : game->highscore_row);
+    draw_bottom_banner("YOU GOT A HIGH SCORE!");
+
+    if (confirm) {
+        highscore_save(&g_highscores);
+        return G_STATE_GAMEOVER;
+    }
+    return G_STATE_HIGHSCORE_NAME;
+}
+
+/* The table with nothing to type, until a press or the timeout, then the title. */
+static int game_highscore_table(game_context_t *game, tile_t *map, keys_state_t *keys) {
+    if (keys->quit) {
+        return G_STATE_QUIT_NOW;
+    }
+
+    run_end_scene_step(game, map);
+    draw_highscore_table(game, -1);
+
+    game->end_timer++;
+    if ((keys->pressed && game->end_timer > RUN_END_SCREEN_GUARD) ||
+            game->end_timer >= RUN_END_SCREEN_STEPS) {
+        return G_STATE_GAMEOVER;
+    }
+    return G_STATE_HIGHSCORE_TABLE;
 }
 
 static void clear_gameloop(game_context_t *game) {
@@ -2475,6 +2764,15 @@ static int game_state_step(game_context_t *game, tile_t *map, keys_state_t *key_
 
     } else if (state == G_STATE_CONGRATS) {
         next_state = game_congrats(game, key_state);
+
+    } else if (state == G_STATE_GAMEOVER_BANNER) {
+        next_state = game_gameover_banner(game, map, key_state);
+
+    } else if (state == G_STATE_HIGHSCORE_NAME) {
+        next_state = game_highscore_name(game, map, key_state);
+
+    } else if (state == G_STATE_HIGHSCORE_TABLE) {
+        next_state = game_highscore_table(game, map, key_state);
     }
 
     return next_state;
@@ -2615,6 +2913,7 @@ int game_main(int is_windowed, int starting_level) {
      * says what the pause menu last left the game as.
      */
     config_load(&g_config);
+    highscore_load(&g_highscores);
     fullscreen = is_windowed ? 0 : g_config.fullscreen;
 
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {

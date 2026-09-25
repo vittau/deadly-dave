@@ -14,8 +14,8 @@ feel, with no emulator and nothing to install.
 
 ## Features
 
-- **The whole game:** all ten levels, the four warp zones, the intro, the ending
-  and the original sound effects.
+- **The whole game:** all ten levels, the four warp zones, the intro, the ending,
+  the high score table and the original sound effects.
 - **Self-contained downloads** for Windows, macOS and Linux, with SDL3 built in.
 - **Any screen:** a wider screen shows more of the level instead of stretching
   it. Scaling is pixel perfect, fit to screen, or a fixed 1x/2x/3x.

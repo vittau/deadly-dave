@@ -9,6 +9,7 @@ tests/test_monster
 tests/test_display
 tests/test_filter
 tests/test_config
+tests/test_highscore
 *.dSYM/
 
 out/**

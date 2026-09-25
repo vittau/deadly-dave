@@ -23,6 +23,10 @@
 #define G_STATE_GAMEOVER          9
 #define G_STATE_QUIT_NOW          10
 #define G_STATE_CONGRATS          11
+/* The end of a run: the GAME OVER banner, the name of a new high score, the table. */
+#define G_STATE_GAMEOVER_BANNER   12
+#define G_STATE_HIGHSCORE_NAME    13
+#define G_STATE_HIGHSCORE_TABLE   14
 
 #define SECRET_LEVEL_NOT_VISITED 0
 #define SECRET_LEVEL_ENTER 1
@@ -55,6 +59,20 @@ typedef struct keys_state_struct {
     int32_t space;
     int32_t key_y;
     int32_t key_n;
+    /*
+     * One shot, for the screens at the end of a run. pressed is any key or pad
+     * button going down; typed is the character a key types into a high score
+     * name (0 for none); erase is Backspace, Left or the pad's B or D-pad left;
+     * pick_up/pick_down are Up/Down or the D-pad, which step the controller's
+     * letter picker, and pick_accept is Right or the pad's A or D-pad right,
+     * which takes the letter it shows.
+     */
+    int32_t pressed;
+    int32_t typed;
+    int32_t erase;
+    int32_t pick_up;
+    int32_t pick_down;
+    int32_t pick_accept;
 } keys_state_t;
 
 typedef struct game_context_struct {
@@ -107,6 +125,20 @@ typedef struct game_context_struct {
     int32_t pause_prev_confirm;
     /* Set by the WARP row: the level was changed, so closing the menu must reload it. */
     int32_t pause_level_changed;
+
+    /*
+     * The end of a run. run_won picks the scene behind the table (the ending
+     * or the level Dave died on) and end_timer counts the steps a screen has
+     * been up. highscore_row is the row being named, highscore_name_length
+     * how much of the name is in, and highscore_pick the character the
+     * controller's picker shows, highscore_picking once it has been used.
+     */
+    int32_t run_won;
+    int32_t end_timer;
+    int32_t highscore_row;
+    int32_t highscore_name_length;
+    int32_t highscore_pick;
+    int32_t highscore_picking;
 } game_context_t;
 
 

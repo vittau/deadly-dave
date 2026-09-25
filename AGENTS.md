@@ -41,8 +41,8 @@ except the icons.
   solid magenta lavender, the title fire red, a pattern the same on every
   line). It is pure and links only
   `filter.c`, `composite.c` and `ntsc.c`.
-- `test_display`, `test_filter` and `test_invfreq` (which writes `out.raw` into
-  `tests/`) run headless. `test_monster` opens a window and needs a real display,
+- `test_display`, `test_filter`, `test_config`, `test_highscore` and
+  `test_invfreq` (which writes `out.raw` into `tests/`) run headless. `test_monster` opens a window and needs a real display,
   so CI runs none of them.
 - `test_monster` does not link `game.c` or `display.c`: it carries its own copies
   of the drawing, input and asset loading code. It exercises `tile.c`,
@@ -57,6 +57,12 @@ except the icons.
   spaces around it, a non numeric value, a last line with no newline), the range
   guard on `fps_limit`/`filter` and the `config_format()` → `config_parse()`
   round trip. It is pure and links `config.c` for the parser alone.
+- `./tests/test_highscore` checks the high score table: the original's
+  defaults, where a score lands (a tie goes below the older row, the last row
+  falls out), the file's tolerated and rejected lines, the sort of a hand
+  edited file and the `highscore_format()` → `highscore_parse()` round trip.
+  It is pure; it links `config.c` only because `highscore.c` finds its file
+  through `config_pref_path()`.
 
 ## Settings
 
@@ -104,6 +110,40 @@ malformed line and a number out of range are skipped one at a time, so a
 hand-edited file, or one written by a newer version, still loads what it can.
 Keep a new setting by adding it to `config_t`, to both branches of
 `config_parse()`, to `config_format()` and to the `g_config` initializer.
+
+## High scores
+
+`highscore.c` / `include/highscore.h` are the original's table, decoded from
+`UNPACKED_DAVE.EXE`: five rows of score, name (up to three characters) and
+level, the default being five `JON` rows of 100 points on level 1 (at
+`0x25f53`, 9 bytes a row: the level, the five score digits, the name). A score
+only takes a row it beats outright. The original checks it whenever a run ends
+(`[0x5792]`, set when the lives run out and when the ending closes; the quit
+path skips it), and so does `game_end_run()`:
+
+- a new high score shows the table over the scene with `YOU GOT A HIGH SCORE!`
+  in a bottom bar, the player names the row and the title screen follows,
+  as in the original;
+- a lost run without one shows `GAME OVER` in that bar, as the original, and
+  then the table, which the original does not (its only other table is the
+  attract loop after the demo, and this port has no demo);
+- a won run without one shows the table.
+
+The scene behind is the ending for a won run (the table shows its level as
+`WON`, level 11 in the file) and otherwise the level Dave died on, its tiles
+still animating. The banner and the table wait 1000 steps, the original's 1000
+frames, or a press after `RUN_END_SCREEN_GUARD`. A name is typed on the
+keyboard (Backspace or Left erase, Enter keeps it); a pad steps through
+`highscore_name_chars` with the D-pad, A takes the character shown, B erases,
+and A with the name full or Start keeps it. The one shots behind this
+(`pressed`, `typed`, `erase`, `pick_*`) are only read by those screens.
+
+A score made under ASSISTS enters the table with a `*` after its level
+(`assisted` in the row), the original's own `*` glyph. The file is
+`highscores.ini` next to `config.ini` (`config_pref_path()`), one
+`score,level,assisted,name` line a row with the name last so it can hold a
+space; like the settings, a bad line is skipped on its own and a hand edited
+file is sorted on load. It is written once a new row is named.
 
 ## CRT filters
 
@@ -219,10 +259,19 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
 - The font is 8x6 glyph tiles: `res/font/<name>.bmp` is `res/tiles/tile(500+index).bmp`
   (white glyph on transparent) and `res/font/black/<name>.bmp` is
   `tile(600+index).bmp` (black glyph on white), `index` being the glyph's place
-  in `font_chars[]` (`A-Z`, `0-9`, space, `, . ( ) ! ? - ' :`). A new glyph needs
-  both BMPs, `res/font/<name>.bmp` and `res/font/black/<name>.bmp` (byte for byte
-  the two tiles), and the character appended to the **end** of `font_chars[]`:
-  the place in that string is the offset from tile 500, so inserting one in the
+  in `font_chars[]` (`A-Z`, `0-9`, space, `, . ( ) ! ? - ' : *`).
+  `scripts/extract-font.py` writes all of them from the original's own font,
+  one per video mode in `UNPACKED_DAVE.EXE` (VGA at `0x20fc0` on the game's
+  palette at `0x26b0a`, EGA as four planes from `0x1eb40`, CGA at `0x1d880`;
+  128 ASCII cells of 8x8, the glyph in rows 1 to 6), into `res/tiles`,
+  `res/font`, `res/ega-tiles` and `res/cga-tiles`; do not hand-edit them. The
+  original stores the glyph dark on a white cell and draws white text by XORing
+  the cell, so the black tiles are the cell as is (opaque, white background)
+  and the white ones the XORed cell with its black left transparent; in VGA
+  that XOR turns the glyph's grey anti-aliasing into orange and yellow pixels,
+  as it does in the original. A new glyph goes at the **end** of both
+  `font_chars[]` and the script's `FONT` list, then the script is rerun: the
+  place in that string is the offset from tile 500, so inserting one in the
   middle would hand every glyph after it its neighbour's tile.
 
 ## EGA and CGA artwork
@@ -231,9 +280,10 @@ is decoded from `UNPACKED_DAVE.EXE`; the format is on the ModdingWiki
 written by `scripts/extract-tiles.py` from `original/`, and the VIDEO MODE row
 (VGA/EGA/CGA, kept in `config.ini`) picks between them and `res/tiles`. Every
 set is loaded at startup (`g_asset_sets[]` in `game.c`) and the row only
-repoints `g_assets`; a tile an EGA or CGA folder does not have (the font, the
-popup box, the port's additions above 157) is loaded from `res/tiles` into that
-set too.
+repoints `g_assets`; a tile an EGA or CGA folder does not have (the popup box,
+the port's additions above 157) is loaded from `res/tiles` into that set too.
+The font is in every folder, from the original's font for that mode (see
+`scripts/extract-font.py` under Levels and the original game data).
 
 - Every tile is saved under the number of its VGA twin with the VGA file's BMP
   header, so the size, the bit depth and the alpha match and nothing in the
@@ -410,8 +460,9 @@ set too.
 - F10 is a development shortcut that jumps to the ending screen from any game
   state, so the last screen can be looked at without playing the ten levels. It
   is a one shot flag on `keys_state_t.congrats`, set by `get_keys()` and read at
-  the top of `game_state_step()`; the ending itself then starts a fresh run on
-  level 5, as it does after the last level. Not F11: macOS takes that key for
+  the top of `game_state_step()`; the ending then ends the run as it does after
+  the last level, so the score goes through the high score table (see High
+  scores) before the title screen. Not F11: macOS takes that key for
   "Show Desktop", so it never reaches the window.
 - The intro is authored as a 320 pixel wide picture: `draw_tile_centered()` puts
   the tiles in the middle of the framebuffer (the maze is 80..240 wide on a 320
@@ -419,7 +470,7 @@ set too.
   which assumes 8 pixel wide font tiles. Add text through that helper rather
   than hand tuning an x offset; the title screen has no F1 help screen, that line
   was removed. `draw_char()` finds a glyph by looking it up in `font_chars[]` (A-Z,
-  0-9, then `space , . ( ) ! ? - ' :`) and adds the offset to the 500 or 600 tile
+  0-9, then `space , . ( ) ! ? - ' : *`) and adds the offset to the 500 or 600 tile
   block, so that order has to keep matching the font tiles in `res/font`.
 - The ending screen is a box of 16 pixel grail tiles sized around its text and
   centered on the framebuffer, with black around it, not a frame spanning the

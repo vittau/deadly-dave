@@ -154,11 +154,7 @@ int config_format(char *out, int out_size, const config_t *config) {
     return length;
 }
 
-/*
- * Absolute path of the settings file, or NULL when SDL cannot work out where
- * to put it. The caller has to SDL_free() it, unlike SDL_GetBasePath().
- */
-static char *config_path(void) {
+char *config_pref_path(const char *file_name) {
     char *directory = SDL_GetPrefPath(CONFIG_ORG, CONFIG_APP);
     char *path;
     size_t length;
@@ -170,10 +166,10 @@ static char *config_path(void) {
     }
 
     /* SDL_GetPrefPath ends its path with a separator, so no joining is needed. */
-    length = strlen(directory) + strlen(CONFIG_NAME) + 1;
+    length = strlen(directory) + strlen(file_name) + 1;
     path = (char *)SDL_malloc(length);
     if (path != NULL) {
-        snprintf(path, length, "%s%s", directory, CONFIG_NAME);
+        snprintf(path, length, "%s%s", directory, file_name);
     }
     SDL_free(directory);
     return path;
@@ -187,7 +183,7 @@ void config_load(config_t *config) {
         return;
     }
 
-    path = config_path();
+    path = config_pref_path(CONFIG_NAME);
     if (path == NULL) {
         return;
     }
@@ -210,7 +206,7 @@ void config_save(const config_t *config) {
         return;
     }
 
-    path = config_path();
+    path = config_pref_path(CONFIG_NAME);
     if (path == NULL) {
         return;
     }

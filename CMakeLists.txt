@@ -47,7 +47,7 @@ if (WIN32)
   set(DEADLY_DAVE_RC "${deadly-dave_BINARY_DIR}/deadly-dave.rc")
 endif()
 
-set(DEADLY_DAVE_SOURCES "main.c" "game.c" "config.c" "display.c" "filter.c"
+set(DEADLY_DAVE_SOURCES "main.c" "game.c" "config.c" "highscore.c" "display.c" "filter.c"
     "composite.c" "ntsc.c" "invfreq.c" "monster.c" "plasma.c" "tile.c" "dave.c" "soundfx.c"
     "bullet.c")
 if (WIN32)

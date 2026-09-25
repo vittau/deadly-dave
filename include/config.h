@@ -67,6 +67,13 @@ void config_parse(config_t *config, const char *text);
  */
 int config_format(char *out, int out_size, const config_t *config);
 
+/*
+ * Absolute path of a file in the per-user directory the settings live in,
+ * which the high scores share. NULL when SDL cannot work out where that is;
+ * the caller has to SDL_free() it, unlike SDL_GetBasePath().
+ */
+char *config_pref_path(const char *file_name);
+
 /* Reads the settings file over *config. Missing or unreadable: it is left as is. */
 void config_load(config_t *config);
 /* Writes *config to the settings file, creating the directory if needed. */
